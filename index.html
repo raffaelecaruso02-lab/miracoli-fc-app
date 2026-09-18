@@ -254,6 +254,22 @@ nav button[aria-current="true"]::before{content:"";position:absolute;top:0;left:
   main{padding:18px}
   .pitch{aspect-ratio:4/3}
 }
+
+/* ===== editor note convocazione ===== */
+.noterow{border:1px solid rgba(226,232,240,.9);border-left-width:5px;border-radius:14px;
+  padding:11px 12px;margin-bottom:11px;box-shadow:var(--shadow-sm)}
+.noterow textarea{border:0;background:transparent;padding:0;font-size:15.5px;line-height:1.45;
+  width:100%;resize:none}
+.noterow textarea:focus{outline:none;box-shadow:none}
+.notetools{display:flex;align-items:center;gap:6px;margin-top:9px;flex-wrap:wrap}
+.sw{width:26px;height:26px;border-radius:8px;border:1px solid rgba(15,23,42,.15);flex:none;
+  transition:transform .1s}
+.sw:active{transform:scale(.9)}
+.sw[aria-pressed="true"]{box-shadow:0 0 0 2px var(--ink)}
+.tg{height:28px;padding:0 10px;border-radius:8px;border:1px solid var(--line);background:var(--surf);
+  font-size:12.5px;font-weight:700;color:var(--soft)}
+.tg[aria-pressed="true"]{background:var(--ink);color:#fff;border-color:var(--ink)}
+.tg.del{margin-left:auto;color:var(--no);border-color:#FECDD3}
 </style>
 </head>
 <body>
@@ -304,7 +320,7 @@ nav button[aria-current="true"]::before{content:"";position:absolute;top:0;left:
 
 const KEY = "miracolifc.v1";
 const BLANK = { club:"Miracoli FC", site:"Campo dei Miracoli", coach:"", phone:"", noteConv:"",
-                logo:null, logoC:null, logoR:null, lastBackup:null, teams:[], players:[],
+                logo:null, logoC:null, logoR:null, notes:null, lastBackup:null, teams:[], players:[],
                 sessions:[], att:{}, matches:[], current:null };
 let db = load();
 let tab = "appello";
@@ -1560,6 +1576,23 @@ const NOTE_DEF = "Portare sempre parastinchi e borraccia personale.\n" +
   "Fate una buona colazione, almeno 1 ora e 30 / 2 ore prima della gara.\n" +
   "Fare sapere con anticipo eventuali assenze.";
 
+/* Ogni riga delle note ha i suoi colori: il mister decide cosa deve
+   saltare all'occhio nel gruppo WhatsApp. */
+const PALETTE = [
+  {n:"Avviso",   bg:"#FEF08A", fg:"#854D0E"},
+  {n:"Info",     bg:"#DBEAFE", fg:"#1E3A8A"},
+  {n:"Conferma", bg:"#DCFCE7", fg:"#14532D"},
+  {n:"Urgente",  bg:"#FEE2E2", fg:"#991B1B"},
+  {n:"Neutro",   bg:"#F1F5F9", fg:"#334155"},
+  {n:"Scuro",    bg:"#16233A", fg:"#FFFFFF"},
+];
+function normNotes(){
+  if(Array.isArray(db.notes) && db.notes.length) return db.notes;
+  const src = (db.noteConv || NOTE_DEF).split("\n").map(x => x.trim()).filter(Boolean);
+  db.notes = src.map(t => ({id:uid(), text:t, bg:"#FEF08A", fg:"#854D0E", bold:true, warn:false}));
+  return db.notes;
+}
+
 function openConv(){ tab = "conv"; render(); window.scrollTo(0,0); }
 
 /* Presenze degli ultimi 7 giorni prima della gara: il dato su cui il
@@ -1618,8 +1651,13 @@ function viewConv(){
       <div><label for="ci">Istruttore</label><input id="ci" value="${E(db.coach||"")}" placeholder="Cognome"></div>
       <div><label for="cp">Cellulare</label><input id="cp" value="${E(db.phone||"")}" inputmode="tel"></div>
     </div>
-    <label for="cd">Indicazioni per le famiglie</label>
-    <textarea id="cd" rows="4">${E(db.noteConv || NOTE_DEF)}</textarea>
+    <label>Indicazioni per le famiglie</label>
+    <p class="muted" style="margin:0 0 9px">Ogni riga ha i suoi colori: tocca un pallino
+      per cambiare sfondo e testo, <b>B</b> per il grassetto, il triangolo per il segnale
+      di avviso.</p>
+    ${noteEditor()}
+    <button class="btn ghost sm" style="width:100%;margin-top:4px" onclick="addNote()">
+      Aggiungi una riga</button>
     <label for="ck">Abbigliamento</label>
     <input id="ck" value="${E(m.kit||"")}" placeholder="Maglietta azzurra, tuta di rappresentanza">
     <button class="btn primary" style="margin-top:14px" onclick="makeConv()">
@@ -1645,11 +1683,47 @@ function convAll(on){
 }
 
 /* --- Disegno su canvas: nessuna libreria, funziona offline --- */
+function noteEditor(){
+  const rows = normNotes();
+  if(!rows.length) return `<p class="muted">Nessuna indicazione. Aggiungine una qui sotto.</p>`;
+  return rows.map(r => `
+    <div class="noterow" style="background:${r.bg};border-left-color:${r.fg}">
+      <textarea rows="2" style="color:${r.fg};font-weight:${r.bold?700:400}"
+        onchange="setNote('${r.id}','text',this.value)">${E(r.text)}</textarea>
+      <div class="notetools">
+        ${PALETTE.map(c => `<button class="sw" title="${c.n}" style="background:${c.bg}"
+          aria-pressed="${r.bg===c.bg}" onclick="paintNote('${r.id}','${c.bg}','${c.fg}')"></button>`).join("")}
+        <button class="tg" aria-pressed="${!!r.bold}" onclick="toggleNote('${r.id}','bold')">B</button>
+        <button class="tg" aria-pressed="${!!r.warn}" onclick="toggleNote('${r.id}','warn')">⚠</button>
+        <button class="tg del" onclick="delNote('${r.id}')">Elimina</button>
+      </div>
+    </div>`).join("");
+}
+function setNote(id, k, v){
+  const r = normNotes().find(x => x.id === id);
+  if(r){ r[k] = v; save(); }
+}
+function paintNote(id, bg, fg){
+  const r = normNotes().find(x => x.id === id);
+  if(r){ r.bg = bg; r.fg = fg; save(); render(); }
+}
+function toggleNote(id, k){
+  const r = normNotes().find(x => x.id === id);
+  if(r){ r[k] = !r[k]; save(); render(); }
+}
+function addNote(){
+  normNotes().push({id:uid(), text:"", bg:"#DBEAFE", fg:"#1E3A8A", bold:false, warn:false});
+  save(); render();
+}
+function delNote(id){
+  db.notes = normNotes().filter(x => x.id !== id);
+  save(); render();
+}
+
 async function makeConv(){
   const m = theMatch();
   db.coach = document.getElementById("ci").value.trim();
   db.phone = document.getElementById("cp").value.trim();
-  db.noteConv = document.getElementById("cd").value.trim();
   m.kit = document.getElementById("ck").value.trim();
   save();
 
@@ -1739,13 +1813,14 @@ async function drawConv(m, names){
     resolveLogo(db.logoC, "logo_italia"),
     resolveLogo(db.logoR, "logo_adidas"),
   ]);
-  const hb = 118;
+  const hb = 168;
   box(M, y, w, hb);
   const third = w/3;
+  g.imageSmoothingEnabled = true;
+  g.imageSmoothingQuality = "high";
   [imgL, imgC, imgR].forEach((im, k) => {
-    if(k) { g.beginPath(); g.moveTo(M + third*k, y); g.lineTo(M + third*k, y + hb); g.stroke(); }
     if(!im) return;
-    const pad = 14, maxH = hb - pad*2, maxW = third - pad*2;
+    const pad = 12, maxH = hb - pad*2, maxW = third - pad*2;
     const r = Math.min(maxW / im.width, maxH / im.height);
     const iw = im.width * r, ih = im.height * r;
     g.drawImage(im, M + third*k + (third - iw)/2, y + (hb - ih)/2, iw, ih);
@@ -1799,28 +1874,49 @@ async function drawConv(m, names){
     y += rowH;
   }
 
-  /* indicazioni per le famiglie, con a capo automatico */
-  y += 22;
-  const raw = [];
-  (db.noteConv || NOTE_DEF).split("\n").forEach(l => l.trim() && raw.push(l.trim()));
-  if(m.kit) raw.push("Presentarsi con: " + m.kit);
+  /* indicazioni per le famiglie: ogni riga è una scheda con i suoi
+     colori, testo grande e a capo automatico */
+  y += 24;
+  const items = normNotes().filter(r => r.text.trim()).map(r => ({...r}));
+  if(m.kit) items.push({text:"Presentarsi con: " + m.kit, bg:"#F1F5F9", fg:"#334155", bold:false, warn:false});
 
-  g.font = F(20, true);
-  const maxW = w - 28, lines = [];
-  raw.forEach(par => {
+  const SZ = 24, LH = 33, PADX = 18, PADY = 15;
+  items.forEach(r => {
+    const indent = r.warn ? 46 : 0;
+    g.font = F(SZ, r.bold);
+    const maxW = w - PADX*2 - indent, lines = [];
     let cur = "";
-    par.split(" ").forEach(word => {
+    r.text.trim().split(/\s+/).forEach(word => {
       const test = cur ? cur + " " + word : word;
       if(g.measureText(test).width > maxW && cur){ lines.push(cur); cur = word; }
       else cur = test;
     });
     if(cur) lines.push(cur);
-  });
 
-  const bh = 26 + lines.length*30;
-  box(M, y, w, bh, "#FFFF00");
-  g.textAlign = "left"; g.font = F(20, true); g.fillStyle = "#C00000";
-  lines.forEach((l, i) => g.fillText(l, M + 14, y + 33 + i*30));
+    const bh = PADY*2 + lines.length*LH - (LH - SZ);
+    g.fillStyle = r.bg;
+    if(g.roundRect){ g.beginPath(); g.roundRect(M, y, w, bh, 10); g.fill(); }
+    else g.fillRect(M, y, w, bh);
+    g.strokeStyle = "rgba(15,23,42,.18)"; g.lineWidth = 1.5;
+    if(g.roundRect){ g.beginPath(); g.roundRect(M, y, w, bh, 10); g.stroke(); }
+    else g.strokeRect(M, y, w, bh);
+    /* barra laterale del colore del testo: stacca la riga a colpo d'occhio */
+    g.fillStyle = r.fg; g.fillRect(M, y + 4, 6, bh - 8);
+
+    if(r.warn){
+      const cx = M + PADX + 13, cy = y + PADY + 13;
+      g.fillStyle = r.fg;
+      g.beginPath();
+      g.moveTo(cx, cy - 14); g.lineTo(cx + 15, cy + 12); g.lineTo(cx - 15, cy + 12);
+      g.closePath(); g.fill();
+      g.fillStyle = r.bg; g.font = F(16, true); g.textAlign = "center";
+      g.fillText("!", cx, cy + 9);
+    }
+
+    g.fillStyle = r.fg; g.textAlign = "left"; g.font = F(SZ, r.bold);
+    lines.forEach((l, i) => g.fillText(l, M + PADX + indent, y + PADY + SZ - 4 + i*LH));
+    y += bh + 12;
+  });
 
   return c;
 }
