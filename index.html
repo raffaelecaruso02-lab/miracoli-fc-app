@@ -328,7 +328,7 @@ nav button[aria-current="true"]::before{content:"";position:absolute;top:0;left:
 
 const KEY = "miracolifc.v1";
 const BLANK = { club:"Miracoli FC", site:"Campo dei Miracoli", coach:"", phone:"", noteConv:"",
-                logo:null, logoC:null, logoR:null, notes:null, noteBg:"#FFFF00", lastBackup:null, teams:[], players:[],
+                logo:null, logoC:null, logoR:null, notes:null, noteBg:"#FFFF00", archives:{}, updatedAt:null, device:"", lastBackup:null, teams:[], players:[],
                 sessions:[], att:{}, matches:[], current:null };
 let db = load();
 let tab = "appello";
@@ -341,6 +341,7 @@ function load(){
   }catch(e){ return structuredClone(BLANK); }
 }
 function save(){
+  db.updatedAt = Date.now();
   try{ localStorage.setItem(KEY, JSON.stringify(db)); }
   catch(e){ toast("Memoria piena: fai un backup ed elimina gli allenamenti vecchi"); }
 }
@@ -399,7 +400,7 @@ function render(){
   document.getElementById("clubname").textContent = db.club;
   document.getElementById("clubsub").textContent = db.site;
   document.querySelectorAll("nav button").forEach(b =>
-    b.setAttribute("aria-current", b.dataset.tab === (tab === "roll" ? "appello" : ["match","conv"].includes(tab) ? "gare" : tab)));
+    b.setAttribute("aria-current", b.dataset.tab === (tab === "roll" ? "appello" : tab === "archivio" ? "report" : ["match","conv"].includes(tab) ? "gare" : tab)));
 
   const sel = document.getElementById("teamsel");
   sel.innerHTML = db.teams.map(t =>
@@ -409,7 +410,7 @@ function render(){
 
   const v = document.getElementById("view");
   if(!db.teams.length){ v.innerHTML = firstRun(); return; }
-  v.innerHTML = ({appello:viewAppello, roll:viewRoll, gare:viewGare, rosa:viewRosa, report:viewReport, match:viewMatch, conv:viewConv})[tab]();
+  v.innerHTML = ({appello:viewAppello, roll:viewRoll, gare:viewGare, rosa:viewRosa, report:viewReport, match:viewMatch, conv:viewConv, archivio:viewArchive})[tab]();
 }
 
 /* ============ PRIMO AVVIO ============ */
@@ -825,6 +826,7 @@ function shareMatch(id){
 
 /* ============ REPORT ============ */
 let repMonth = today().slice(0,7);
+let archMonth = null;
 
 const inMonth = (iso, mk) => (iso || "").startsWith(mk);
 const monthLabel = mk => new Date(mk + "-15T12:00")
@@ -917,6 +919,8 @@ function viewReport(){
     <h2>Certificati da sistemare</h2>
     <div style="margin-top:8px">${alertRows}</div></div>` : ""}
 
+  ${archiveList()}
+
   <div class="card">
     <h2>Archivio completo</h2>
     <p class="muted">Rosa, presenze, partite e minutaggio di tutta la stagione.</p>
@@ -946,9 +950,8 @@ function backupBanner(){
 }
 
 /* --- esportazione del mese --- */
-function exportMonth(el){
-  return busy(el, () => {
-    const r = roster(), mk = repMonth;
+function monthSheets(mk){
+    const r = roster();
     const ss = db.sessions.filter(s => s.teamId === db.current && inMonth(s.date, mk))
                           .sort((a,b)=>a.date.localeCompare(b.date));
     const ms = db.matches.filter(m => m.teamId === db.current && inMonth(m.date, mk))
@@ -1008,9 +1011,144 @@ function exportMonth(el){
       ms.reduce((n,m)=>n+scoreOf(m).gf,0), ms.reduce((n,m)=>n+scoreOf(m).ga,0),
       ms.reduce((n,m)=>n+scoreOf(m).punti,0)];
 
-    saveXlsx(`report-${mk}-${slug(team().name)}.xlsx`, [rie, pres, eventi, gare]);
+    return [rie, pres, eventi, gare];
+}
+function exportMonth(el){
+  return busy(el, () => {
+    saveXlsx(`report-${repMonth}-${slug(team().name)}.xlsx`, monthSheets(repMonth));
     toast("Report del mese scaricato");
   });
+}
+
+
+/* ============ ARCHIVI MENSILI ============ */
+/* Ogni mese si congela in una copia a sé: i mesi passati restano
+   consultabili anche dopo che la rosa è cambiata o un allenamento è
+   stato corretto. Nell'archivio si salvano solo le sedute e le gare di
+   quel mese, non tutto il database: altrimenti lo spazio finisce. */
+
+function archiveMonth(mk){
+  const ss = db.sessions.filter(x => x.teamId === db.current && inMonth(x.date, mk));
+  const ms = db.matches.filter(x => x.teamId === db.current && inMonth(x.date, mk));
+  if(!ss.length && !ms.length) return toast("In quel mese non c'è attività registrata");
+
+  const att = {};
+  ss.forEach(x => att[x.id] = structuredClone(db.att[x.id] || {}));
+  if(!db.archives) db.archives = {};
+  const esisteva = !!db.archives[mk];
+  db.archives[mk] = {
+    ts: Date.now(),
+    teamId: db.current,
+    teamName: team().name,
+    club: db.club,
+    players: structuredClone(db.players.filter(p => p.teamId === db.current)),
+    sessions: structuredClone(ss),
+    matches: structuredClone(ms).map(normMatch),
+    att,
+  };
+  save(); render();
+  toast(esisteva ? "Archivio del mese aggiornato" : "Mese archiviato");
+}
+
+/* Sostituzione temporanea dei dati per leggere un mese passato: nessuna
+   scrittura avviene mentre è attiva. */
+function withArchive(mk, fn){
+  const a = db.archives?.[mk];
+  if(!a) return null;
+  const vero = db;
+  db = {club:a.club, site:vero.site, teams:[{id:a.teamId, name:a.teamName}], current:a.teamId,
+        players:a.players, sessions:a.sessions, matches:a.matches, att:a.att,
+        archives:{}, noteBg:vero.noteBg};
+  try{ return fn(); }
+  finally{ db = vero; }
+}
+
+function viewArchive(){
+  const mk = archMonth, a = db.archives?.[mk];
+  if(!a){ tab = "report"; return viewReport(); }
+
+  const cards = withArchive(mk, () => roster().map(p => {
+    const st = monthStats(p.id, mk);
+    const cls = st.freq === null ? "mid" : st.freq >= 75 ? "hi" : st.freq >= 50 ? "mid" : "lo";
+    const assenze = st.A + st.G;
+    return `<div class="card">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="jersey">${p.num ?? "–"}</span>
+        <span class="nm" style="flex:1"><b style="font-size:15px">${E(p.last)} ${E(p.first)}</b></span>
+        <span class="freq ${cls}">${st.freq === null ? "–" : st.freq + "%"}</span>
+      </div>
+      <div style="margin-top:10px">
+        <div class="barline"><span class="nm">Allenamenti</span>
+          <span class="pct" style="width:auto">${st.P}/${st.registrati || 0} presenze</span></div>
+        ${assenze ? `<div class="barline"><span class="nm">Assenze</span>
+          <span class="pct" style="width:auto">${assenze}${st.G?` (${st.G} giustificate)`:""}</span></div>` : ""}
+        ${st.partite ? `<div class="barline"><span class="nm">Partite</span>
+          <span class="pct" style="width:auto">${st.partite} · ${st.minuti}′</span></div>` : ""}
+        ${st.golTot ? `<div class="barline"><span class="nm">Gol</span>
+          <span class="pct" style="width:auto;color:var(--ok)">${st.golTot} — ${detSeg(st.gol)}</span></div>` : ""}
+        ${st.assTot ? `<div class="barline"><span class="nm">Assist</span>
+          <span class="pct" style="width:auto">${st.assTot} — ${detSeg(st.ass)}</span></div>` : ""}
+      </div>
+    </div>`;
+  }).join(""));
+
+  return `
+  <button class="backlink" onclick="go('report')">← Torna al report</button>
+  <div class="card" style="border-left:4px solid var(--navy)">
+    <h2 style="text-transform:capitalize">${monthLabel(mk)}</h2>
+    <p class="muted">${E(a.teamName)} · ${a.players.length} atleti · ${a.sessions.length} allenamenti ·
+      ${a.matches.length} gare</p>
+    <p class="muted" style="margin-top:4px">Archiviato il ${new Date(a.ts).toLocaleString("it-IT",
+      {day:"numeric", month:"long", hour:"2-digit", minute:"2-digit"})}. Sola lettura.</p>
+    <button class="btn primary" style="margin-top:11px" onclick="exportArchive('${mk}', this)">
+      Scarica questo mese (Excel)</button>
+    <button class="btn ghost" style="margin-top:9px" onclick="archiveMonth('${mk}')">
+      Riaggiorna con i dati di oggi</button>
+    <button class="btn ghost" style="margin-top:9px;color:var(--no)" onclick="delArchive('${mk}')">
+      Elimina l'archivio</button>
+  </div>
+  ${cards}`;
+}
+
+function openArchive(mk){ archMonth = mk; tab = "archivio"; render(); window.scrollTo(0,0); }
+function delArchive(mk){
+  if(!confirm("Eliminare l'archivio di " + monthLabel(mk) + "?")) return;
+  delete db.archives[mk];
+  tab = "report"; save(); render();
+}
+function exportArchive(mk, el){
+  return busy(el, () => {
+    const sheets = withArchive(mk, () => monthSheets(mk));
+    saveXlsx(`archivio-${mk}-${slug(db.archives[mk].teamName)}.xlsx`, sheets);
+    toast("Archivio scaricato");
+  });
+}
+
+function archiveList(){
+  const keys = Object.keys(db.archives || {}).sort().reverse();
+  const prev = new Date(); prev.setDate(1); prev.setMonth(prev.getMonth() - 1);
+  const prevKey = prev.toISOString().slice(0,7);
+  const daFare = !db.archives?.[prevKey] &&
+    db.sessions.some(x => x.teamId === db.current && inMonth(x.date, prevKey));
+
+  return `<div class="card">
+    <h2>Archivi mensili</h2>
+    <p class="muted">Una copia congelata di ogni mese, consultabile anche più avanti.</p>
+    ${daFare ? `<p class="muted" style="background:#FEF3C7;color:#92400E;padding:9px 12px;
+      border-radius:10px;margin:10px 0">${monthLabel(prevKey)} è finito e non l'hai ancora archiviato.</p>
+      <button class="btn primary" onclick="archiveMonth('${prevKey}')">
+        Archivia ${monthLabel(prevKey)}</button>` : ""}
+    <button class="btn ghost" style="margin-top:9px" onclick="archiveMonth(repMonth)">
+      Archivia ${monthLabel(repMonth)}</button>
+    ${keys.length ? `<div style="margin-top:12px">${keys.map(k => {
+      const a = db.archives[k];
+      return `<div class="barline">
+        <span class="nm" style="text-transform:capitalize">${monthLabel(k)}</span>
+        <span class="pct" style="width:auto;color:var(--soft)">${a.sessions.length} all · ${a.matches.length} gare</span>
+        <button class="tg" onclick="openArchive('${k}')">Apri</button>
+      </div>`;
+    }).join("")}</div>` : `<p class="muted" style="margin-top:10px">Nessun mese archiviato.</p>`}
+  </div>`;
 }
 
 /* ============ CONDIVISIONE ============ */
@@ -1052,6 +1190,14 @@ function openSettings(){
     <h3 style="margin-top:22px">Gruppi squadra</h3>
     <button class="btn ghost" style="margin-top:9px" onclick="newTeam()">Aggiungi un gruppo</button>
 
+    <h3 style="margin-top:22px">Questo dispositivo</h3>
+    <label for="dv">Come lo chiami</label>
+    <input id="dv" value="${E(db.device||"")}" placeholder="Telefono del mister / PC di casa">
+    <p class="muted" style="margin-top:7px">Finisce nel file di backup: quando ne apri uno
+      capisci da dove viene. Ultima modifica dei dati qui:
+      <b>${db.updatedAt ? new Date(db.updatedAt).toLocaleString("it-IT",
+        {day:"numeric",month:"long",hour:"2-digit",minute:"2-digit"}) : "mai"}</b>.</p>
+
     <h3 style="margin-top:22px">Backup</h3>
     <p class="muted">I dati stanno solo su questo telefono. Se lo perdi o svuoti la cronologia
       del browser, spariscono. Scarica un backup ogni tanto: è un file, mandalo pure a te stesso
@@ -1074,17 +1220,22 @@ function clearLogos(){
 function saveSettings(){
   db.club = document.getElementById("cn").value.trim() || "Miracoli FC";
   db.site = document.getElementById("cs").value.trim();
+  const dv = document.getElementById("dv");
+  if(dv) db.device = dv.value.trim();
   save(); closeSheet(); render(); toast("Salvato");
 }
 function backup(){
-  const blob = new Blob([JSON.stringify(db,null,2)], {type:"application/json"});
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = `miracolifc-backup-${today()}.json`;
-  a.click();
+  const stamp = new Date().toISOString().slice(0,16).replace("T","_").replace(":","");
+  const payload = Object.assign({}, db, {
+    _meta: {exportedAt: Date.now(), device: db.device || "", app: "miracolifc"},
+  });
+  dlFile(`miracolifc-backup-${stamp}.json`, JSON.stringify(payload, null, 2), "application/json");
   db.lastBackup = Date.now(); save();
-  setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
 }
+
+/* Il ripristino sostituisce tutto: prima di farlo mostra le due date, così
+   non si cancella per sbaglio il lavoro più recente passando da un
+   dispositivo all'altro. */
 function restore(input){
   const f = input.files[0]; if(!f) return;
   const rd = new FileReader();
@@ -1092,13 +1243,28 @@ function restore(input){
     try{
       const data = JSON.parse(rd.result);
       if(!data.teams) throw new Error("formato");
-      if(!confirm("Sostituire i dati attuali con quelli del backup?")) return;
+
+      const fmt = t => t ? new Date(t).toLocaleString("it-IT",
+        {day:"numeric", month:"long", hour:"2-digit", minute:"2-digit"}) : "data sconosciuta";
+      const daFile = data._meta?.exportedAt || data.updatedAt;
+      const qui = db.updatedAt;
+      const conta = d => `${(d.players||[]).length} atleti · ${(d.sessions||[]).length} allenamenti · ${(d.matches||[]).length} gare`;
+
+      let msg = `Il backup è del ${fmt(daFile)}\n${conta(data)}\n\n`;
+      msg += `Su questo dispositivo: ${fmt(qui)}\n${conta(db)}\n\n`;
+      if(qui && daFile && daFile < qui)
+        msg += "⚠️ ATTENZIONE: i dati qui sono PIÙ RECENTI del backup.\nRipristinando perdi le modifiche fatte dopo.\n\n";
+      msg += "Sostituire tutto con il backup?";
+
+      if(!confirm(msg)) { input.value = ""; return; }
       db = Object.assign(structuredClone(BLANK), data);
+      delete db._meta;
       save(); closeSheet(); render(); toast("Dati ripristinati");
     }catch(e){ toast("File non valido"); }
   };
   rd.readAsText(f);
 }
+
 function wipe(){
   if(!confirm("Cancellare tutti i dati? Non si torna indietro.")) return;
   if(!confirm("Sicuro? Rosa, presenze e gare andranno perse.")) return;
