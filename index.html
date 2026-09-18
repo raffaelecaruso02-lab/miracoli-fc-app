@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Miracoli FC</title>
+<meta name="theme-color" content="#7B1123">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bord:#7B1123; --bord-deep:#660B1A; --cel:#5BC0EB; --cel-lt:#78D5FA;
+  --ink:#1E293B; --soft:#64748B; --line:#E2E8F0; --ice:#F8FAFC; --surf:#fff;
+  --ok:#15803D; --no:#BE123C; --warn:#D97706; --neutral:#334155;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ice);color:var(--ink);font-family:Inter,system-ui,sans-serif;
+  -webkit-font-smoothing:antialiased;padding-bottom:calc(68px + env(safe-area-inset-bottom))}
+h1,h2,h3,.num{font-family:Archivo,sans-serif;letter-spacing:-.02em}
+button,input,select,textarea{font:inherit;color:inherit}
+button{border:0;background:none;cursor:pointer;touch-action:manipulation}
+:focus-visible{outline:3px solid var(--cel);outline-offset:2px;border-radius:8px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+.wrap{max-width:560px;margin:0 auto}
+
+/* header */
+header{background:var(--bord);color:#fff;padding:12px 16px calc(12px + env(safe-area-inset-top));
+  position:sticky;top:0;z-index:30}
+header .bar{display:flex;align-items:center;justify-content:space-between;gap:10px}
+header h1{font-size:16px;margin:0;font-weight:800}
+header .sub{font-size:11px;color:var(--cel-lt);margin-top:1px}
+select.team{background:rgba(255,255,255,.14);border:0;border-radius:9px;color:#fff;
+  padding:8px 10px;font-size:13px;max-width:190px}
+select.team option{color:#000}
+.iconbtn{width:38px;height:38px;border-radius:10px;background:rgba(255,255,255,.12);
+  display:flex;align-items:center;justify-content:center;font-size:17px}
+
+/* nav */
+nav{position:fixed;left:0;right:0;bottom:0;z-index:40;background:var(--surf);
+  border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(4,1fr);
+  padding-bottom:env(safe-area-inset-bottom)}
+nav button{padding:9px 4px 11px;font-size:11px;font-weight:600;color:var(--soft);
+  display:flex;flex-direction:column;align-items:center;gap:3px}
+nav button svg{width:21px;height:21px}
+nav button[aria-current="true"]{color:var(--bord)}
+
+main{padding:14px}
+.card{background:var(--surf);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:12px}
+.card h2{margin:0 0 3px;font-size:15px}
+.muted{color:var(--soft);font-size:13px}
+.empty{text-align:center;padding:34px 18px;color:var(--soft);font-size:14px;line-height:1.5}
+.empty b{display:block;color:var(--ink);font-size:15px;margin-bottom:5px}
+
+.btn{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;
+  border-radius:12px;padding:13px;font-weight:700;font-size:14.5px}
+.btn.primary{background:var(--bord);color:#fff}
+.btn.accent{background:var(--cel);color:#0F172A}
+.btn.ghost{background:var(--ice);color:var(--soft);border:1px solid var(--line)}
+.btn.wa{background:#25D366;color:#053}
+.btn:disabled{background:var(--line);color:var(--soft);cursor:not-allowed}
+.btn.sm{padding:9px 13px;font-size:13px;width:auto}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+
+label{display:block;font-size:12px;font-weight:600;color:var(--soft);margin:11px 0 4px}
+input,select,textarea{width:100%;background:var(--surf);border:1px solid var(--line);
+  border-radius:11px;padding:11px;font-size:15px}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--cel);
+  box-shadow:0 0 0 3px rgba(91,192,235,.25)}
+textarea{resize:vertical}
+
+/* appello */
+.sess{background:var(--bord);color:#fff;border-radius:16px;padding:14px;margin-bottom:12px}
+.sess .top{display:flex;justify-content:space-between;align-items:flex-end;gap:10px}
+.sess input[type=date]{background:rgba(255,255,255,.15);border:0;color:#fff;padding:8px 10px;
+  border-radius:9px;font-size:13px;width:auto}
+.tally{text-align:right;line-height:1}
+.tally .num{font-size:30px;font-weight:800;color:var(--cel-lt);font-variant-numeric:tabular-nums}
+.tally .num small{font-size:15px;color:rgba(255,255,255,.5)}
+.tally p{margin:4px 0 0;font-size:11px;color:rgba(255,255,255,.65)}
+.prog{height:5px;background:rgba(255,255,255,.2);border-radius:99px;margin-top:11px;overflow:hidden}
+.prog i{display:block;height:100%;background:var(--cel);transition:width .25s}
+
+.plist{list-style:none;margin:0;padding:0}
+.plist li{background:var(--surf);border:1px solid var(--line);border-radius:14px;
+  padding:10px 12px 12px;margin-bottom:9px}
+.who{display:flex;align-items:center;gap:10px}
+.jersey{width:34px;height:34px;flex:none;border-radius:9px;background:var(--ice);
+  border:1px solid var(--line);display:flex;align-items:center;justify-content:center;
+  font-family:Archivo;font-weight:800;font-size:13px;color:var(--soft);font-variant-numeric:tabular-nums}
+.who .nm{flex:1;min-width:0}
+.who .nm b{display:block;font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.flag{display:inline-block;margin-top:3px;font-size:11px;font-weight:600;padding:2px 7px;border-radius:5px}
+.flag.exp{background:#FFE4E6;color:#BE123C}
+.flag.soon{background:#FEF3C7;color:#B45309}
+.notetxt{font-size:11.5px;color:var(--soft);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mini{width:36px;height:36px;border-radius:9px;color:var(--soft);flex:none;font-size:15px}
+.states{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-top:9px}
+.states button{height:50px;border-radius:11px;background:var(--ice);border:1px solid var(--line);
+  color:var(--soft);font-size:10.5px;font-weight:700;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:2px;transition:transform .07s}
+.states button:active{transform:scale(.94)}
+.states button svg{width:18px;height:18px}
+.states button[aria-pressed="true"]{color:#fff;border-color:transparent}
+.states [data-s=P][aria-pressed="true"]{background:var(--ok)}
+.states [data-s=A][aria-pressed="true"]{background:var(--no)}
+.states [data-s=G][aria-pressed="true"]{background:var(--warn)}
+.states [data-s=I][aria-pressed="true"]{background:var(--neutral)}
+.counts{display:flex;justify-content:space-between;font-size:11.5px;color:var(--soft);margin:2px 0 10px}
+.counts b{font-family:Archivo;color:var(--ink)}
+
+/* report */
+.barline{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)}
+.barline:last-child{border:0}
+.barline .nm{flex:1;min-width:0;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.track{width:78px;height:7px;background:var(--ice);border-radius:99px;overflow:hidden;flex:none}
+.track i{display:block;height:100%;background:var(--ok)}
+.track i.mid{background:var(--warn)}
+.track i.low{background:var(--no)}
+.pct{width:42px;text-align:right;font-family:Archivo;font-weight:700;font-size:13px;font-variant-numeric:tabular-nums}
+
+/* gare */
+.match{border-left:4px solid var(--bord)}
+.match .when{font-family:Archivo;font-weight:800;font-size:20px;color:var(--bord)}
+.chiplist{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px}
+.chip{border:1px solid var(--line);background:var(--ice);border-radius:9px;padding:7px 11px;
+  font-size:13px;font-weight:600;color:var(--soft)}
+.chip[aria-pressed="true"]{background:var(--bord);border-color:var(--bord);color:#fff}
+
+/* sheet */
+.sheet{position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:60;display:none;align-items:flex-end}
+.sheet.on{display:flex}
+.sheet .in{background:var(--surf);width:100%;max-width:560px;margin:0 auto;
+  border-radius:20px 20px 0 0;padding:18px 16px calc(24px + env(safe-area-inset-bottom));
+  max-height:88vh;overflow:auto}
+.sheet h3{margin:0 0 2px;font-size:16px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:84px;background:var(--ink);
+  color:#fff;padding:11px 18px;border-radius:11px;font-size:13.5px;z-index:70;opacity:0;
+  pointer-events:none;transition:opacity .2s}
+.toast.on{opacity:1}
+.pre{background:var(--ice);border:1px solid var(--line);border-radius:11px;padding:12px;
+  font-size:13px;line-height:1.5;white-space:pre-wrap;margin-top:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="bar">
+      <div>
+        <h1 id="clubname">Miracoli FC</h1>
+        <div class="sub" id="clubsub">Campo dei Miracoli</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <select class="team" id="teamsel" onchange="pickTeam(this.value)"></select>
+        <button class="iconbtn" onclick="openSettings()" aria-label="Impostazioni">⚙</button>
+      </div>
+    </div>
+  </header>
+
+  <main id="view"></main>
+
+  <nav>
+    <button data-tab="appello" onclick="go('appello')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l2 2 4-4"/><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4"/></svg>
+      Appello</button>
+    <button data-tab="gare" onclick="go('gare')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7l4.5 3.3-1.7 5.3h-5.6L7.5 10.3z"/></svg>
+      Gare</button>
+    <button data-tab="rosa" onclick="go('rosa')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.9"/></svg>
+      Rosa</button>
+    <button data-tab="report" onclick="go('report')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
+      Report</button>
+  </nav>
+</div>
+
+<div class="sheet" id="sheet" onclick="if(event.target===this)closeSheet()">
+  <div class="in" id="sheetin"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+
+/* ============ ARCHIVIO ============
+   Tutto vive in localStorage, sul telefono di chi usa l'app.
+   Nessun server, nessun account. Il rovescio della medaglia è che
+   un backup ogni tanto è indispensabile: lo fai da Impostazioni. */
+
+const KEY = "miracolifc.v1";
+const BLANK = { club:"Miracoli FC", site:"Campo dei Miracoli", teams:[], players:[],
+                sessions:[], att:{}, matches:[], current:null };
+let db = load();
+let tab = "appello";
+let sessDate = today();
+
+function load(){
+  try{
+    const raw = localStorage.getItem(KEY);
+    if(!raw) return structuredClone(BLANK);
+    return Object.assign(structuredClone(BLANK), JSON.parse(raw));
+  }catch(e){ return structuredClone(BLANK); }
+}
+function save(){
+  try{ localStorage.setItem(KEY, JSON.stringify(db)); }
+  catch(e){ toast("Memoria piena: fai un backup ed elimina gli allenamenti vecchi"); }
+}
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function today(){ return new Date().toISOString().slice(0,10); }
+
+/* ============ UTILITÀ ============ */
+const E = s => String(s??"").replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const ICO = d => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+const STATE = {
+  P:{lab:"Presente", ico:ICO('<path d="M20 6 9 17l-5-5"/>')},
+  A:{lab:"Assente",  ico:ICO('<path d="M18 6 6 18M6 6l12 12"/>')},
+  G:{lab:"Giustif.", ico:ICO('<circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/>')},
+  I:{lab:"Infort.",  ico:ICO('<path d="M3 12h4l2-5 3 10 2-5h7"/>')}
+};
+function dLong(iso){
+  return new Date(iso+"T12:00").toLocaleDateString("it-IT",{weekday:"long",day:"numeric",month:"long"});
+}
+function dShort(iso){
+  return new Date(iso+"T12:00").toLocaleDateString("it-IT",{day:"2-digit",month:"2-digit"});
+}
+let toastT;
+function toast(msg){
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.classList.add("on");
+  clearTimeout(toastT); toastT = setTimeout(()=>t.classList.remove("on"), 2600);
+}
+function certState(p){
+  if(!p.cert) return "missing";
+  const d = Math.round((new Date(p.cert) - new Date(today()))/86400000);
+  if(d < 0) return "expired";
+  if(d <= 30) return "soon";
+  return "ok";
+}
+
+/* ============ SELEZIONI ============ */
+const team = () => db.teams.find(t => t.id === db.current) || null;
+const roster = () => db.players.filter(p => p.teamId === db.current)
+                               .sort((a,b)=> (a.last+a.first).localeCompare(b.last+b.first,"it"));
+function sessionFor(date){
+  return db.sessions.find(s => s.teamId === db.current && s.date === date);
+}
+function ensureSession(date){
+  let s = sessionFor(date);
+  if(!s){ s = {id:uid(), teamId:db.current, date, pitch:"Campo A", closed:false};
+          db.sessions.push(s); db.att[s.id] = {}; save(); }
+  if(!db.att[s.id]) db.att[s.id] = {};
+  return s;
+}
+
+/* ============ NAVIGAZIONE ============ */
+function go(t){ tab = t; render(); window.scrollTo(0,0); }
+function pickTeam(id){ db.current = id; save(); render(); }
+
+function render(){
+  document.getElementById("clubname").textContent = db.club;
+  document.getElementById("clubsub").textContent = db.site;
+  document.querySelectorAll("nav button").forEach(b =>
+    b.setAttribute("aria-current", b.dataset.tab === tab));
+
+  const sel = document.getElementById("teamsel");
+  sel.innerHTML = db.teams.map(t =>
+    `<option value="${t.id}" ${t.id===db.current?"selected":""}>${E(t.name)}</option>`).join("")
+    || `<option>nessun gruppo</option>`;
+  sel.style.display = db.teams.length ? "" : "none";
+
+  const v = document.getElementById("view");
+  if(!db.teams.length){ v.innerHTML = firstRun(); return; }
+  v.innerHTML = ({appello:viewAppello, gare:viewGare, rosa:viewRosa, report:viewReport})[tab]();
+}
+
+/* ============ PRIMO AVVIO ============ */
+function firstRun(){
+  return `
+  <div class="card">
+    <div class="empty">
+      <b>Benvenuto</b>
+      Crea il tuo primo gruppo squadra, poi aggiungi gli atleti.
+      I dati restano su questo telefono.
+    </div>
+    <button class="btn primary" onclick="newTeam()">Crea un gruppo squadra</button>
+    <button class="btn ghost" style="margin-top:9px" onclick="demo()">Carica dati di esempio</button>
+  </div>`;
+}
+function newTeam(){
+  sheet(`<h3>Nuovo gruppo squadra</h3>
+    <label for="tn">Nome</label>
+    <input id="tn" placeholder="Pulcini 2016 — Gruppo A" autofocus>
+    <label for="tc">Categoria</label>
+    <select id="tc">
+      <option>Piccoli Amici</option><option>Primi Calci</option>
+      <option selected>Pulcini</option><option>Esordienti</option><option>Agonistica</option>
+    </select>
+    <button class="btn primary" style="margin-top:14px" onclick="saveTeam()">Crea gruppo</button>`);
+}
+function saveTeam(){
+  const name = document.getElementById("tn").value.trim();
+  if(!name) return toast("Dai un nome al gruppo");
+  const t = {id:uid(), name, cat:document.getElementById("tc").value};
+  db.teams.push(t); db.current = t.id; save(); closeSheet(); render();
+}
+
+/* ============ ROSA ============ */
+function viewRosa(){
+  const r = roster();
+  const rows = r.map(p => {
+    const c = certState(p);
+    const flag = c==="expired" ? `<span class="flag exp">Certificato scaduto</span>`
+              : c==="missing" ? `<span class="flag exp">Certificato mancante</span>`
+              : c==="soon"    ? `<span class="flag soon">Scade il ${dShort(p.cert)}</span>` : "";
+    return `<li><div class="who">
+      <span class="jersey">${p.num ?? "–"}</span>
+      <span class="nm"><b>${E(p.last)} ${E(p.first)}</b>${flag}</span>
+      <button class="mini" onclick="editPlayer('${p.id}')" aria-label="Modifica">✎</button>
+    </div></li>`;
+  }).join("");
+
+  return `
+  <div class="card">
+    <h2>${E(team().name)}</h2>
+    <p class="muted">${r.length} atlet${r.length===1?"a":"i"} in rosa</p>
+    <div class="row2" style="margin-top:12px">
+      <button class="btn accent sm" style="width:auto" onclick="editPlayer()">Aggiungi atleta</button>
+      <button class="btn ghost sm" style="width:auto" onclick="bulkAdd()">Aggiungi in blocco</button>
+    </div>
+  </div>
+  ${r.length ? `<ul class="plist">${rows}</ul>` : `<div class="card"><div class="empty">
+     <b>Rosa vuota</b>Aggiungi gli atleti e potrai fare l'appello.</div></div>`}`;
+}
+
+function editPlayer(id){
+  const p = db.players.find(x=>x.id===id) || {first:"",last:"",num:"",cert:""};
+  sheet(`<h3>${id?"Modifica atleta":"Nuovo atleta"}</h3>
+    <label for="pl">Cognome</label><input id="pl" value="${E(p.last)}" autofocus>
+    <label for="pf">Nome</label><input id="pf" value="${E(p.first)}">
+    <div class="row2">
+      <div><label for="pn">Numero</label><input id="pn" type="number" inputmode="numeric" value="${p.num??""}"></div>
+      <div><label for="pc">Certificato scade il</label><input id="pc" type="date" value="${p.cert||""}"></div>
+    </div>
+    <button class="btn primary" style="margin-top:14px" onclick="savePlayer('${id||""}')">Salva</button>
+    ${id?`<button class="btn ghost" style="margin-top:9px" onclick="delPlayer('${id}')">Elimina dalla rosa</button>`:""}`);
+}
+function savePlayer(id){
+  const last = document.getElementById("pl").value.trim();
+  const first = document.getElementById("pf").value.trim();
+  if(!last && !first) return toast("Serve almeno il cognome");
+  const data = {last, first, num: document.getElementById("pn").value || null,
+                cert: document.getElementById("pc").value || null};
+  if(id) Object.assign(db.players.find(x=>x.id===id), data);
+  else db.players.push({id:uid(), teamId:db.current, ...data});
+  save(); closeSheet(); render();
+}
+function delPlayer(id){
+  if(!confirm("Eliminare l'atleta? Spariscono anche le sue presenze.")) return;
+  db.players = db.players.filter(p=>p.id!==id);
+  Object.values(db.att).forEach(a => delete a[id]);
+  db.matches.forEach(m => m.callups = (m.callups||[]).filter(x=>x!==id));
+  save(); closeSheet(); render();
+}
+function bulkAdd(){
+  sheet(`<h3>Aggiungi in blocco</h3>
+    <p class="muted">Un atleta per riga. Il numero di maglia è facoltativo, va dopo la virgola.</p>
+    <textarea id="bulk" rows="9" placeholder="Bianchi Leonardo, 7
+Caruso Mattia, 11
+D'Amico Riccardo"></textarea>
+    <button class="btn primary" style="margin-top:12px" onclick="saveBulk()">Aggiungi alla rosa</button>`);
+}
+function saveBulk(){
+  const lines = document.getElementById("bulk").value.split("\n").map(s=>s.trim()).filter(Boolean);
+  let n = 0;
+  lines.forEach(line => {
+    const [namePart, numPart] = line.split(",");
+    const bits = namePart.trim().split(/\s+/);
+    if(!bits.length) return;
+    const first = bits.length > 1 ? bits.pop() : "";
+    db.players.push({id:uid(), teamId:db.current, last:bits.join(" "), first,
+                     num: numPart ? numPart.trim() : null, cert:null});
+    n++;
+  });
+  save(); closeSheet(); render(); toast(n + " atleti aggiunti");
+}
+
+/* ============ APPELLO ============ */
+function viewAppello(){
+  const r = roster();
+  if(!r.length) return `<div class="card"><div class="empty">
+    <b>Prima la rosa</b>Aggiungi gli atleti dalla scheda Rosa, poi torna qui.</div></div>`;
+
+  const s = ensureSession(sessDate);
+  const a = db.att[s.id];
+  const c = {P:0,A:0,G:0,I:0}; let done = 0;
+  r.forEach(p => { const st = a[p.id]?.s; if(st){ c[st]++; done++; } });
+  const pct = r.length ? Math.round(c.P / r.length * 100) : 0;
+
+  const rows = r.map(p => {
+    const st = a[p.id]?.s, note = a[p.id]?.n;
+    const cs = certState(p);
+    const flag = cs==="expired" ? `<span class="flag exp">Certificato scaduto</span>`
+              : cs==="missing" ? `<span class="flag exp">Certificato mancante</span>`
+              : cs==="soon"    ? `<span class="flag soon">Certificato in scadenza</span>` : "";
+    return `<li>
+      <div class="who">
+        <span class="jersey">${p.num ?? "–"}</span>
+        <span class="nm"><b>${E(p.last)} ${E(p.first)}</b>${flag}
+          ${note?`<span class="notetxt">Nota: ${E(note)}</span>`:""}</span>
+        <button class="mini" onclick="noteFor('${p.id}')" aria-label="Nota">✎</button>
+      </div>
+      <div class="states" role="group">
+        ${Object.entries(STATE).map(([k,v])=>`
+          <button data-s="${k}" aria-pressed="${st===k}" onclick="mark('${p.id}','${k}')">
+            ${v.ico}<span>${v.lab}</span></button>`).join("")}
+      </div></li>`;
+  }).join("");
+
+  return `
+  <div class="sess">
+    <div class="top">
+      <div>
+        <input type="date" value="${sessDate}" onchange="sessDate=this.value;render()">
+        <div style="font-size:12.5px;color:rgba(255,255,255,.7);margin-top:6px">${dLong(sessDate)}</div>
+      </div>
+      <div class="tally">
+        <div class="num">${c.P}<small>/${r.length}</small></div>
+        <p>${pct}% presenti</p>
+      </div>
+    </div>
+    <div class="prog"><i style="width:${r.length?done/r.length*100:0}%"></i></div>
+    <button class="btn accent" style="margin-top:11px" onclick="allPresent()">Segna tutti presenti</button>
+  </div>
+
+  <div class="counts">
+    <span><b>${c.P}</b> presenti</span><span><b>${c.A}</b> assenti</span>
+    <span><b>${c.G}</b> giustificati</span><span><b>${c.I}</b> infortunati</span>
+  </div>
+
+  <ul class="plist">${rows}</ul>
+
+  <button class="btn ${done===r.length?"primary":"ghost"}" onclick="shareAppello()"
+    ${done<r.length?"disabled":""}>
+    ${done<r.length ? `Mancano ${r.length-done} atleti` : "Condividi il riepilogo"}</button>
+  <p class="muted" style="text-align:center;margin-top:9px">Le presenze si salvano da sole.</p>`;
+}
+
+function mark(pid, st){
+  const s = ensureSession(sessDate);
+  db.att[s.id][pid] = Object.assign(db.att[s.id][pid] || {}, {s:st});
+  save();
+  if(navigator.vibrate) navigator.vibrate(8);
+  render();
+}
+function allPresent(){
+  const s = ensureSession(sessDate);
+  roster().forEach(p => db.att[s.id][p.id] = Object.assign(db.att[s.id][p.id]||{}, {s:"P"}));
+  save(); render();
+}
+function noteFor(pid){
+  const s = ensureSession(sessDate);
+  const p = db.players.find(x=>x.id===pid);
+  sheet(`<h3>Nota su ${E(p.first)} ${E(p.last)}</h3>
+    <p class="muted">Resta sul tuo telefono, non finisce in nessun messaggio.</p>
+    <textarea id="nt" rows="3" placeholder="Es. ha lavorato a parte, fastidio al ginocchio">${E(db.att[s.id][pid]?.n||"")}</textarea>
+    <button class="btn primary" style="margin-top:12px" onclick="saveNote('${pid}')">Salva nota</button>`);
+}
+function saveNote(pid){
+  const s = ensureSession(sessDate);
+  const t = document.getElementById("nt").value.trim();
+  db.att[s.id][pid] = Object.assign(db.att[s.id][pid]||{}, {n: t || undefined});
+  save(); closeSheet(); render();
+}
+function shareAppello(){
+  const s = sessionFor(sessDate), a = db.att[s.id];
+  const by = k => roster().filter(p => a[p.id]?.s === k)
+                          .map(p => `• ${p.last} ${p.first}`).join("\n");
+  let txt = `${db.club} — ${team().name}\nAllenamento di ${dLong(sessDate)}\n`;
+  const pres = roster().filter(p=>a[p.id]?.s==="P").length;
+  txt += `\nPresenti: ${pres}/${roster().length}\n`;
+  [["A","Assenti"],["G","Giustificati"],["I","Infortunati"]].forEach(([k,lab])=>{
+    const l = by(k); if(l) txt += `\n${lab}:\n${l}\n`;
+  });
+  shareText(txt, "Riepilogo appello");
+}
+
+/* ============ GARE ============ */
+function viewGare(){
+  const ms = db.matches.filter(m=>m.teamId===db.current).sort((a,b)=>a.date.localeCompare(b.date));
+  const cards = ms.map(m => {
+    const conv = (m.callups||[]).length;
+    return `<div class="card match">
+      <div class="when">${dShort(m.date)} · ${m.meet}</div>
+      <h2 style="margin-top:4px">${E(db.club)} — ${E(m.opponent)}</h2>
+      <p class="muted">${m.venue==="home"?"In casa":"In trasferta"} · ${E(m.place)} · ${conv} convocati</p>
+      <div class="row2" style="margin-top:11px">
+        <button class="btn ghost sm" style="width:auto" onclick="pickCallups('${m.id}')">Convocati</button>
+        <button class="btn wa sm" style="width:auto" onclick="shareMatch('${m.id}')">Invia su WhatsApp</button>
+      </div>
+      <button class="btn ghost sm" style="width:100%;margin-top:9px" onclick="editMatch('${m.id}')">Modifica gara</button>
+    </div>`;
+  }).join("");
+
+  return `<button class="btn primary" style="margin-bottom:12px" onclick="editMatch()">Nuova gara</button>
+    ${ms.length ? cards : `<div class="card"><div class="empty">
+      <b>Nessuna gara</b>Crea la convocazione e mandala ai genitori su WhatsApp.</div></div>`}`;
+}
+
+function editMatch(id){
+  const m = db.matches.find(x=>x.id===id) ||
+    {opponent:"", venue:"home", date:today(), meet:"09:15", kick:"10:30",
+     place:db.site, address:"", kit:"Prima divisa bordeaux", notes:""};
+  sheet(`<h3>${id?"Modifica gara":"Nuova gara"}</h3>
+    <label for="mo">Avversario</label><input id="mo" value="${E(m.opponent)}" autofocus>
+    <div class="row2">
+      <div><label for="mv">Dove</label><select id="mv">
+        <option value="home" ${m.venue==="home"?"selected":""}>In casa</option>
+        <option value="away" ${m.venue==="away"?"selected":""}>In trasferta</option></select></div>
+      <div><label for="md">Data</label><input id="md" type="date" value="${m.date}"></div>
+    </div>
+    <div class="row2">
+      <div><label for="mm">Ritrovo</label><input id="mm" type="time" value="${m.meet}"></div>
+      <div><label for="mk">Calcio d'inizio</label><input id="mk" type="time" value="${m.kick}"></div>
+    </div>
+    <label for="mp">Campo</label><input id="mp" value="${E(m.place)}">
+    <label for="ma">Indirizzo</label><input id="ma" value="${E(m.address)}" placeholder="Via, città">
+    <label for="mkit">Divisa</label><input id="mkit" value="${E(m.kit)}">
+    <label for="mn">Note per i genitori</label>
+    <textarea id="mn" rows="2" placeholder="Portate borraccia e parastinchi">${E(m.notes)}</textarea>
+    <button class="btn primary" style="margin-top:14px" onclick="saveMatch('${id||""}')">Salva gara</button>
+    ${id?`<button class="btn ghost" style="margin-top:9px" onclick="delMatch('${id}')">Elimina gara</button>`:""}`);
+}
+function saveMatch(id){
+  const g = i => document.getElementById(i).value;
+  const data = {opponent:g("mo").trim(), venue:g("mv"), date:g("md"), meet:g("mm"), kick:g("mk"),
+                place:g("mp").trim(), address:g("ma").trim(), kit:g("mkit").trim(), notes:g("mn").trim()};
+  if(!data.opponent) return toast("Manca l'avversario");
+  if(id) Object.assign(db.matches.find(x=>x.id===id), data);
+  else db.matches.push({id:uid(), teamId:db.current, callups:[], ...data});
+  save(); closeSheet(); render();
+}
+function delMatch(id){
+  if(!confirm("Eliminare la gara?")) return;
+  db.matches = db.matches.filter(m=>m.id!==id);
+  save(); closeSheet(); render();
+}
+
+function pickCallups(id){
+  const m = db.matches.find(x=>x.id===id);
+  const chips = roster().map(p => `<button class="chip" aria-pressed="${(m.callups||[]).includes(p.id)}"
+      onclick="toggleCallup('${id}','${p.id}',this)">${E(p.last)} ${E(p.first.slice(0,1))}.</button>`).join("");
+  sheet(`<h3>Convocati</h3>
+    <p class="muted">Tocca i nomi. Chi ha il certificato scaduto non dovrebbe scendere in campo.</p>
+    <div class="chiplist">${chips}</div>
+    <button class="btn primary" style="margin-top:14px" onclick="closeSheet();render()">Fatto</button>`);
+}
+function toggleCallup(mid, pid, el){
+  const m = db.matches.find(x=>x.id===mid);
+  m.callups = m.callups || [];
+  const i = m.callups.indexOf(pid);
+  if(i<0) m.callups.push(pid); else m.callups.splice(i,1);
+  el.setAttribute("aria-pressed", i<0);
+  save();
+}
+function shareMatch(id){
+  const m = db.matches.find(x=>x.id===id);
+  const names = (m.callups||[]).map(pid => db.players.find(p=>p.id===pid))
+    .filter(Boolean).sort((a,b)=>a.last.localeCompare(b.last,"it"))
+    .map(p=>`• ${p.last} ${p.first}`).join("\n");
+
+  let t = `⚽ CONVOCAZIONE — ${team().name}\n`;
+  t += `${db.club} vs ${m.opponent}\n`;
+  t += `${dLong(m.date)}\n\n`;
+  t += `🕘 Ritrovo: ${m.meet}\n`;
+  t += `🕙 Calcio d'inizio: ${m.kick}\n`;
+  t += `📍 ${m.place}${m.address ? "\n" + m.address : ""}\n`;
+  if(m.address) t += `🗺 https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(m.place+" "+m.address)}\n`;
+  t += `👕 ${m.kit}\n`;
+  if(m.notes) t += `\n${m.notes}\n`;
+  if(names) t += `\nConvocati (${m.callups.length}):\n${names}\n`;
+  t += `\nConfermate la presenza rispondendo qui. Grazie!`;
+
+  shareText(t, "Convocazione");
+}
+
+/* ============ REPORT ============ */
+function viewReport(){
+  const r = roster();
+  if(!r.length) return `<div class="card"><div class="empty"><b>Niente da mostrare</b>
+    Aggiungi la rosa e fai qualche appello.</div></div>`;
+
+  const ss = db.sessions.filter(s => s.teamId === db.current).sort((a,b)=>b.date.localeCompare(a.date));
+  const stats = r.map(p => {
+    let tot=0, pres=0;
+    ss.forEach(s => { const st = db.att[s.id]?.[p.id]?.s; if(st){ tot++; if(st==="P") pres++; } });
+    return {p, tot, pres, pct: tot ? Math.round(pres/tot*100) : null};
+  }).sort((a,b)=> (b.pct ?? -1) - (a.pct ?? -1));
+
+  const bars = stats.map(({p,tot,pres,pct}) => `
+    <div class="barline">
+      <span class="nm">${E(p.last)} ${E(p.first)}</span>
+      <span class="track"><i class="${pct===null?"":pct>=75?"":pct>=50?"mid":"low"}"
+        style="width:${pct ?? 0}%"></i></span>
+      <span class="pct">${pct===null?"–":pct+"%"}</span>
+    </div>`).join("");
+
+  const alerts = r.filter(p => certState(p) !== "ok");
+  const alertRows = alerts.map(p => {
+    const c = certState(p);
+    return `<div class="barline"><span class="nm">${E(p.last)} ${E(p.first)}</span>
+      <span class="flag ${c==="soon"?"soon":"exp"}">${
+        c==="expired"?"Scaduto":c==="missing"?"Mancante":"Scade il "+dShort(p.cert)}</span></div>`;
+  }).join("");
+
+  return `
+  <div class="card">
+    <h2>Frequenza</h2>
+    <p class="muted">${ss.length} allenament${ss.length===1?"o":"i"} registrat${ss.length===1?"o":"i"}</p>
+    <div style="margin-top:10px">${bars}</div>
+  </div>
+
+  ${alerts.length ? `<div class="card">
+    <h2>Certificati da sistemare</h2>
+    <div style="margin-top:8px">${alertRows}</div></div>` : ""}
+
+  <div class="card">
+    <h2>Per la segreteria</h2>
+    <p class="muted">Scarica il registro completo in formato Excel.</p>
+    <button class="btn ghost" style="margin-top:11px" onclick="exportCsv()">Scarica il registro (CSV)</button>
+  </div>`;
+}
+
+function exportCsv(){
+  const r = roster();
+  const ss = db.sessions.filter(s=>s.teamId===db.current).sort((a,b)=>a.date.localeCompare(b.date));
+  const head = ["Cognome","Nome","Numero","Certificato", ...ss.map(s=>dShort(s.date)),
+                "Allenamenti","Presenze","Frequenza %"];
+  const lines = [head.join(";")];
+  r.forEach(p => {
+    let tot=0, pres=0;
+    const cells = ss.map(s => {
+      const st = db.att[s.id]?.[p.id]?.s;
+      if(st){ tot++; if(st==="P") pres++; }
+      return st || "";
+    });
+    lines.push([p.last, p.first, p.num??"", p.cert??"", ...cells,
+                tot, pres, tot?Math.round(pres/tot*100):""].join(";"));
+  });
+  const blob = new Blob(["\uFEFF" + lines.join("\n")], {type:"text/csv;charset=utf-8"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `presenze-${team().name.replace(/\s+/g,"-")}-${today()}.csv`;
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
+}
+
+/* ============ CONDIVISIONE ============ */
+function shareText(text, title){
+  sheet(`<h3>${E(title)}</h3>
+    <div class="pre">${E(text)}</div>
+    <a class="btn wa" style="margin-top:12px;text-decoration:none"
+       href="https://wa.me/?text=${encodeURIComponent(text)}" target="_blank" rel="noreferrer">
+       Apri WhatsApp</a>
+    <button class="btn ghost" style="margin-top:9px" onclick='copyText(${JSON.stringify(text)})'>Copia il testo</button>`);
+}
+function copyText(t){
+  navigator.clipboard.writeText(t).then(()=>toast("Testo copiato"))
+    .catch(()=>toast("Copia non riuscita, selezionalo a mano"));
+}
+
+/* ============ IMPOSTAZIONI E BACKUP ============ */
+function openSettings(){
+  sheet(`<h3>Impostazioni</h3>
+    <label for="cn">Nome della società</label><input id="cn" value="${E(db.club)}">
+    <label for="cs">Struttura</label><input id="cs" value="${E(db.site)}">
+    <button class="btn primary" style="margin-top:12px" onclick="saveSettings()">Salva</button>
+
+    <h3 style="margin-top:22px">Gruppi squadra</h3>
+    <button class="btn ghost" style="margin-top:9px" onclick="newTeam()">Aggiungi un gruppo</button>
+
+    <h3 style="margin-top:22px">Backup</h3>
+    <p class="muted">I dati stanno solo su questo telefono. Se lo perdi o svuoti la cronologia
+      del browser, spariscono. Scarica un backup ogni tanto: è un file, mandalo pure a te stesso
+      su WhatsApp o per email.</p>
+    <button class="btn ghost" style="margin-top:10px" onclick="backup()">Scarica un backup</button>
+    <label for="rf" style="margin-top:14px">Ripristina da un backup</label>
+    <input id="rf" type="file" accept="application/json" onchange="restore(this)">
+    <button class="btn ghost" style="margin-top:20px;color:var(--no)" onclick="wipe()">Cancella tutto</button>`);
+}
+function saveSettings(){
+  db.club = document.getElementById("cn").value.trim() || "Miracoli FC";
+  db.site = document.getElementById("cs").value.trim();
+  save(); closeSheet(); render(); toast("Salvato");
+}
+function backup(){
+  const blob = new Blob([JSON.stringify(db,null,2)], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `miracolifc-backup-${today()}.json`;
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
+}
+function restore(input){
+  const f = input.files[0]; if(!f) return;
+  const rd = new FileReader();
+  rd.onload = () => {
+    try{
+      const data = JSON.parse(rd.result);
+      if(!data.teams) throw new Error("formato");
+      if(!confirm("Sostituire i dati attuali con quelli del backup?")) return;
+      db = Object.assign(structuredClone(BLANK), data);
+      save(); closeSheet(); render(); toast("Dati ripristinati");
+    }catch(e){ toast("File non valido"); }
+  };
+  rd.readAsText(f);
+}
+function wipe(){
+  if(!confirm("Cancellare tutti i dati? Non si torna indietro.")) return;
+  if(!confirm("Sicuro? Rosa, presenze e gare andranno perse.")) return;
+  db = structuredClone(BLANK); save(); closeSheet(); render();
+}
+
+/* ============ DATI DI ESEMPIO ============ */
+function demo(){
+  const t = {id:uid(), name:"Pulcini 2016 — Gruppo A", cat:"Pulcini"};
+  db.teams.push(t); db.current = t.id;
+  const d = n => new Date(Date.now()+n*86400000).toISOString().slice(0,10);
+  [["Bianchi","Leonardo",7,220],["Caruso","Mattia",11,18],["D'Amico","Riccardo",4,190],
+   ["Esposito","Gabriel",9,260],["Ferrara","Tommaso",2,-12],["Greco","Edoardo",14,300],
+   ["Longo","Samuele",6,145],["Marchetti","Diego",10,210],["Neri","Christian",3,175],
+   ["Orlando","Filippo",8,240],["Palumbo","Andrea",5,195],["Rizzo","Alessandro",12,130],
+   ["Santoro","Matteo",1,280],["Testa","Nicolò",15,9],["Valente","Lorenzo",13,160],
+   ["Zanetti","Federico",16,null]
+  ].forEach(([last,first,num,off]) =>
+    db.players.push({id:uid(), teamId:t.id, last, first, num, cert: off===null?null:d(off)}));
+
+  [21,19,14,12,7,5].forEach(ago => {
+    const s = {id:uid(), teamId:t.id, date:d(-ago), pitch:"Campo A", closed:true};
+    db.sessions.push(s); db.att[s.id] = {};
+    db.players.filter(p=>p.teamId===t.id).forEach((p,i) => {
+      const k = (i*3 + ago) % 11;
+      db.att[s.id][p.id] = {s: k===0 ? "A" : k===4 ? "G" : (p.last==="Ferrara" && ago<15) ? "I" : "P"};
+    });
+  });
+
+  db.matches.push({id:uid(), teamId:t.id, opponent:"Atletico Casalotti", venue:"away",
+    date:d(3), meet:"09:15", kick:"10:30", place:"Centro Sportivo Casalotti",
+    address:"Via di Casalotti 259, Roma", kit:"Bordeaux, prima divisa + calzettoni celesti",
+    notes:"Portate borraccia e parastinchi. Si parte insieme dal Campo dei Miracoli.",
+    callups: db.players.filter(p=>p.teamId===t.id && !["Ferrara","Zanetti"].includes(p.last)).map(p=>p.id)});
+
+  save(); render(); toast("Dati di esempio caricati");
+}
+
+/* ============ SHEET ============ */
+function sheet(html){
+  document.getElementById("sheetin").innerHTML = html;
+  document.getElementById("sheet").classList.add("on");
+  const f = document.querySelector("#sheetin input, #sheetin textarea");
+  if(f) setTimeout(()=>f.focus(), 60);
+}
+function closeSheet(){ document.getElementById("sheet").classList.remove("on"); }
+document.addEventListener("keydown", e => { if(e.key==="Escape") closeSheet(); });
+
+/* ============ AVVIO ============ */
+if(db.teams.length && !db.teams.find(t=>t.id===db.current)) db.current = db.teams[0].id;
+render();
+</script>
+</body>
+</html>
