@@ -304,7 +304,7 @@ nav button[aria-current="true"]::before{content:"";position:absolute;top:0;left:
 
 const KEY = "miracolifc.v1";
 const BLANK = { club:"Miracoli FC", site:"Campo dei Miracoli", coach:"", phone:"", noteConv:"",
-                logo:null, lastBackup:null, teams:[], players:[],
+                logo:null, logoC:null, logoR:null, lastBackup:null, teams:[], players:[],
                 sessions:[], att:{}, matches:[], current:null };
 let db = load();
 let tab = "appello";
@@ -1010,8 +1010,20 @@ function openSettings(){
     <label for="cs">Struttura</label><input id="cs" value="${E(db.site)}">
     <button class="btn primary" style="margin-top:12px" onclick="saveSettings()">Salva</button>
 
-    <label for="lg">Logo della società (per la convocazione)</label>
-    <input id="lg" type="file" accept="image/*" onchange="setLogo(this)">
+    <h3 style="margin-top:22px">Loghi della convocazione</h3>
+    <p class="muted">Tre riquadri affiancati in cima al foglio, come sul modello
+      ufficiale. Se nella cartella <b>icons/</b> del sito ci sono i file
+      <b>logo_miracoli</b>, <b>logo_italia</b> e <b>logo_adidas</b>, vengono usati
+      da soli e non devi caricare niente. I campi qui sotto servono solo a
+      sostituirli su questo telefono.</p>
+    <label for="lg">Riquadro sinistro</label>
+    <input id="lg" type="file" accept="image/*" onchange="setLogo(this,'logo')">
+    <label for="lgc">Riquadro centrale</label>
+    <input id="lgc" type="file" accept="image/*" onchange="setLogo(this,'logoC')">
+    <label for="lgr">Riquadro destro</label>
+    <input id="lgr" type="file" accept="image/*" onchange="setLogo(this,'logoR')">
+    <button class="btn ghost sm" style="width:100%;margin-top:10px" onclick="clearLogos()">
+      Togli tutti i loghi</button>
 
     <h3 style="margin-top:22px">Gruppi squadra</h3>
     <button class="btn ghost" style="margin-top:9px" onclick="newTeam()">Aggiungi un gruppo</button>
@@ -1025,11 +1037,15 @@ function openSettings(){
     <input id="rf" type="file" accept="application/json" onchange="restore(this)">
     <button class="btn ghost" style="margin-top:20px;color:var(--no)" onclick="wipe()">Cancella tutto</button>`);
 }
-function setLogo(input){
+function setLogo(input, key){
   const f = input.files[0]; if(!f) return;
   const rd = new FileReader();
-  rd.onload = () => { db.logo = rd.result; save(); toast("Logo caricato"); };
+  rd.onload = () => { db[key || "logo"] = rd.result; save(); toast("Logo caricato"); };
   rd.readAsDataURL(f);
+}
+function clearLogos(){
+  db.logo = db.logoC = db.logoR = null;
+  save(); toast("Loghi rimossi");
 }
 function saveSettings(){
   db.club = document.getElementById("cn").value.trim() || "Miracoli FC";
@@ -1641,7 +1657,7 @@ async function makeConv(){
 
   const names = roster().filter(p => m.callups.includes(p.id))
     .sort((a,b) => a.last.localeCompare(b.last, "it"))
-    .map(p => p.last + (p.first ? " " + p.first.slice(0,1) + "." : ""));
+    .map(p => (p.last + " " + (p.first || "")).trim());
 
   const canvas = await drawConv(m, names);
   const out = document.getElementById("convout");
@@ -1655,103 +1671,158 @@ async function makeConv(){
   out.scrollIntoView({behavior:"smooth", block:"start"});
 }
 
-function drawConv(m, names){
-  return new Promise(resolve => {
-    const W = 1000, H = 1414;
-    const c = document.createElement("canvas");
-    c.width = W; c.height = H;
-    const g = c.getContext("2d");
-    g.fillStyle = "#fff"; g.fillRect(0, 0, W, H);
+/* I loghi possono stare in `icons/` nella repo: l'app li cerca lì da
+   sola, provando le estensioni più comuni. Un file caricato a mano
+   dalle impostazioni ha comunque la precedenza. */
+const LOGO_EXT = ["png", "jpg", "jpeg", "webp", "svg"];
+async function resolveLogo(uploaded, base){
+  if(uploaded) return loadImg(uploaded);
+  for(const ext of LOGO_EXT){
+    const im = await loadImg(`icons/${base}.${ext}`);
+    if(im) return im;
+  }
+  return null;
+}
 
-    const M = 60, w = W - M*2;
-    let y = M;
-    const F = (sz, b) => `${b ? "bold " : ""}${sz}px Arial, Helvetica, sans-serif`;
-    const box = (x0, y0, ww, hh, fill) => {
-      if(fill){ g.fillStyle = fill; g.fillRect(x0, y0, ww, hh); }
-      g.strokeStyle = "#000"; g.lineWidth = 2; g.strokeRect(x0, y0, ww, hh);
-    };
-    const center = (t, yy, sz, col) => {
-      g.font = F(sz, true); g.fillStyle = col; g.textAlign = "center";
-      g.fillText(t, W/2, yy);
-    };
-    const left = (lbl, val, yy, sz) => {
-      g.textAlign = "left"; g.font = F(sz, true);
-      g.fillStyle = "#C00000"; g.fillText(lbl, M + 14, yy);
-      const off = g.measureText(lbl).width;
-      g.fillStyle = "#000"; g.fillText(val, M + 14 + off + 8, yy);
-    };
-
-    const paint = () => {
-      /* intestazione */
-      box(M, y, w, 120);
-      g.textAlign = "center"; g.font = F(30, true); g.fillStyle = "#7B1123";
-      g.fillText(db.club.toUpperCase(), W/2, y + 58);
-      g.font = F(19, false); g.fillStyle = "#555";
-      g.fillText((db.site || "").toUpperCase(), W/2, y + 88);
-      if(db.logo){
-        try{ g.drawImage(window._logoImg, M + 16, y + 16, 88, 88); }catch(e){}
-      }
-      y += 120;
-
-      /* blocco informazioni */
-      box(M, y, w, 46); center("CATEGORIA", y + 32, 26, "#0070C0"); y += 46;
-      box(M, y, w, 46); center((team().name || "").toUpperCase(), y + 32, 25, "#000"); y += 46;
-      box(M, y, w, 46); center("INCONTRO", y + 32, 26, "#0070C0"); y += 46;
-      const sfida = m.venue === "home"
-        ? `${db.club} - ${m.opponent}` : `${m.opponent} - ${db.club}`;
-      box(M, y, w, 46); center(sfida.toUpperCase(), y + 32, 25, "#000"); y += 46;
-
-      const dat = new Date(m.date + "T12:00").toLocaleDateString("it-IT");
-      const info = [
-        ["DATA:", dat, null],
-        ["APPUNTAMENTO ALLE ORE:", m.meet, "#FFFF00"],
-        ["INDIRIZZO CAMPO:", (m.place + (m.address ? " — " + m.address : "")).toUpperCase(), null],
-        ["INIZIO GARA ALLE ORE:", m.kick, null],
-        ["ISTRUTTORE:", (db.coach || "").toUpperCase(), null],
-        ["CELLULARE:", db.phone || "", null],
-      ];
-      info.forEach(([l, v, bg]) => { box(M, y, w, 42, bg); left(l, v, y + 29, 22); y += 42; });
-
-      /* elenco convocati su due colonne, 11 per colonna */
-      y += 26;
-      const half = w/2, numW = 56, rowH = 42, per = 11;
-      for(let i = 0; i < per; i++){
-        [0, 1].forEach(col => {
-          const x0 = M + col*half;
-          const n = i + 1 + col*per;
-          box(x0, y, numW, rowH);
-          g.textAlign = "center"; g.font = F(21, true); g.fillStyle = "#000";
-          g.fillText(String(n), x0 + numW/2, y + 29);
-          box(x0 + numW, y, half - numW, rowH);
-          const nm = names[n - 1];
-          if(nm){
-            g.textAlign = "left"; g.font = F(21, true);
-            g.fillText(nm, x0 + numW + 14, y + 29);
-          }
-        });
-        y += rowH;
-      }
-
-      /* indicazioni per le famiglie */
-      y += 22;
-      const lines = [];
-      (db.noteConv || NOTE_DEF).split("\n").forEach(l => l.trim() && lines.push(l.trim()));
-      if(m.kit) lines.push("Presentarsi con: " + m.kit);
-      const bh = 28 + lines.length*30;
-      box(M, y, w, bh, "#FFFF00");
-      g.textAlign = "left"; g.font = F(20, true); g.fillStyle = "#C00000";
-      lines.forEach((l, i) => g.fillText(l, M + 14, y + 34 + i*30));
-
-      resolve(c);
-    };
-
-    if(db.logo){
-      const img = new Image();
-      img.onload = () => { window._logoImg = img; paint(); };
-      img.onerror = paint;
-      img.src = db.logo;
-    } else paint();
+function loadImg(src){
+  return new Promise(res => {
+    if(!src) return res(null);
+    const im = new Image();
+    im.onload = () => res(im);
+    im.onerror = () => res(null);
+    im.src = src;
   });
+}
+
+async function drawConv(m, names){
+  const W = 1000, H = 1414;
+  const c = document.createElement("canvas");
+  c.width = W; c.height = H;
+  const g = c.getContext("2d");
+  g.fillStyle = "#fff"; g.fillRect(0, 0, W, H);
+
+  const M = 55, w = W - M*2;
+  let y = M;
+  const F = (sz, b) => `${b ? "bold " : ""}${sz}px Arial, Helvetica, sans-serif`;
+
+  const box = (x0, y0, ww, hh, fill) => {
+    if(fill){ g.fillStyle = fill; g.fillRect(x0, y0, ww, hh); }
+    g.strokeStyle = "#000"; g.lineWidth = 2; g.strokeRect(x0, y0, ww, hh);
+  };
+
+  /* Rimpicciolisce il testo finché non entra nella cella: sul foglio
+     ufficiale non deve uscire una lettera dai bordi. */
+  const fit = (t, maxW, sz, bold) => {
+    let s = sz;
+    g.font = F(s, bold);
+    while(g.measureText(t).width > maxW && s > 11){ s -= 1; g.font = F(s, bold); }
+    return s;
+  };
+  const cText = (t, yy, sz, col, bold = true) => {
+    fit(t, w - 28, sz, bold);
+    g.fillStyle = col; g.textAlign = "center";
+    g.fillText(t, W/2, yy);
+  };
+  const lText = (lbl, val, yy, sz) => {
+    g.textAlign = "left";
+    let s = sz;
+    g.font = F(s, true);
+    while(g.measureText(lbl + " " + val).width > w - 28 && s > 11){ s -= 1; g.font = F(s, true); }
+    g.fillStyle = "#C00000"; g.fillText(lbl, M + 14, yy);
+    const off = g.measureText(lbl).width;
+    g.fillStyle = "#000"; g.fillText(val, M + 14 + off + 9, yy);
+  };
+
+  /* intestazione: tre riquadri per i loghi, come sul modello ufficiale */
+  const [imgL, imgC, imgR] = await Promise.all([
+    resolveLogo(db.logo,  "logo_miracoli"),
+    resolveLogo(db.logoC, "logo_italia"),
+    resolveLogo(db.logoR, "logo_adidas"),
+  ]);
+  const hb = 118;
+  box(M, y, w, hb);
+  const third = w/3;
+  [imgL, imgC, imgR].forEach((im, k) => {
+    if(k) { g.beginPath(); g.moveTo(M + third*k, y); g.lineTo(M + third*k, y + hb); g.stroke(); }
+    if(!im) return;
+    const pad = 14, maxH = hb - pad*2, maxW = third - pad*2;
+    const r = Math.min(maxW / im.width, maxH / im.height);
+    const iw = im.width * r, ih = im.height * r;
+    g.drawImage(im, M + third*k + (third - iw)/2, y + (hb - ih)/2, iw, ih);
+  });
+  if(!imgL && !imgC && !imgR){
+    g.textAlign = "center";
+    fit(db.club.toUpperCase(), w - 40, 34, true);
+    g.fillStyle = "#7B1123"; g.fillText(db.club.toUpperCase(), W/2, y + 62);
+    g.font = F(18, false); g.fillStyle = "#555";
+    g.fillText((db.site || "").toUpperCase(), W/2, y + 92);
+  }
+  y += hb;
+
+  /* blocco informazioni */
+  box(M, y, w, 46); cText("CATEGORIA", y + 32, 26, "#0070C0"); y += 46;
+  box(M, y, w, 46); cText((team().name || "").toUpperCase(), y + 32, 25, "#000"); y += 46;
+  box(M, y, w, 46); cText("INCONTRO", y + 32, 26, "#0070C0"); y += 46;
+  const sfida = m.venue === "home"
+    ? `${db.club} - ${m.opponent}` : `${m.opponent} - ${db.club}`;
+  box(M, y, w, 46); cText(sfida.toUpperCase(), y + 32, 25, "#000"); y += 46;
+
+  const dat = new Date(m.date + "T12:00").toLocaleDateString("it-IT");
+  [
+    ["DATA:", dat, null],
+    ["APPUNTAMENTO ALLE ORE:", m.meet, "#FFFF00"],
+    ["INDIRIZZO CAMPO:", (m.place + (m.address ? " — " + m.address : "")).toUpperCase(), null],
+    ["INIZIO GARA ALLE ORE:", m.kick, null],
+    ["ISTRUTTORE:", (db.coach || "").toUpperCase(), null],
+    ["CELLULARE:", db.phone || "", null],
+  ].forEach(([l, v, bg]) => { box(M, y, w, 42, bg); lText(l, v, y + 29, 22); y += 42; });
+
+  /* elenco convocati: due colonne da 11, cognome e nome per esteso */
+  y += 26;
+  const half = w/2, numW = 52, rowH = 42, per = 11;
+  for(let i = 0; i < per; i++){
+    [0, 1].forEach(col => {
+      const x0 = M + col*half;
+      const n = i + 1 + col*per;
+      box(x0, y, numW, rowH);
+      g.textAlign = "center"; g.font = F(21, true); g.fillStyle = "#000";
+      g.fillText(String(n), x0 + numW/2, y + 29);
+      box(x0 + numW, y, half - numW, rowH);
+      const nm = names[n - 1];
+      if(nm){
+        const cellW = half - numW - 22;
+        fit(nm, cellW, 21, true);
+        g.textAlign = "left"; g.fillStyle = "#000";
+        g.fillText(nm, x0 + numW + 12, y + 29);
+      }
+    });
+    y += rowH;
+  }
+
+  /* indicazioni per le famiglie, con a capo automatico */
+  y += 22;
+  const raw = [];
+  (db.noteConv || NOTE_DEF).split("\n").forEach(l => l.trim() && raw.push(l.trim()));
+  if(m.kit) raw.push("Presentarsi con: " + m.kit);
+
+  g.font = F(20, true);
+  const maxW = w - 28, lines = [];
+  raw.forEach(par => {
+    let cur = "";
+    par.split(" ").forEach(word => {
+      const test = cur ? cur + " " + word : word;
+      if(g.measureText(test).width > maxW && cur){ lines.push(cur); cur = word; }
+      else cur = test;
+    });
+    if(cur) lines.push(cur);
+  });
+
+  const bh = 26 + lines.length*30;
+  box(M, y, w, bh, "#FFFF00");
+  g.textAlign = "left"; g.font = F(20, true); g.fillStyle = "#C00000";
+  lines.forEach((l, i) => g.fillText(l, M + 14, y + 33 + i*30));
+
+  return c;
 }
 
 function dlConv(){
