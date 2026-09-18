@@ -5,6 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Miracoli FC</title>
 <meta name="theme-color" content="#7B1123">
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Miracoli FC">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -141,6 +146,59 @@ textarea{resize:vertical}
 .toast.on{opacity:1}
 .pre{background:var(--ice);border:1px solid var(--line);border-radius:11px;padding:12px;
   font-size:13px;line-height:1.5;white-space:pre-wrap;margin-top:10px}
+
+/* ===== matchday ===== */
+.mdbar{display:flex;gap:7px;margin-bottom:11px}
+.mdbar button{flex:1;border-radius:11px;padding:10px 4px;font-size:13px;font-weight:700;
+  background:var(--surf);border:1px solid var(--line);color:var(--soft)}
+.mdbar button small{display:block;font-size:10.5px;font-weight:600;opacity:.65;margin-top:1px}
+.mdbar button[aria-pressed="true"]{background:var(--bord);border-color:var(--bord);color:#fff}
+.pitch{position:relative;width:100%;aspect-ratio:3/4;border-radius:16px;overflow:hidden;
+  background:linear-gradient(175deg,#2F7A44,#256235);margin-bottom:10px}
+.pitch svg{position:absolute;inset:0;width:100%;height:100%}
+.slot{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;
+  align-items:center;gap:3px;width:62px}
+.slot .bub{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font-family:Archivo;font-weight:800;font-size:14px;
+  border:2px dashed rgba(255,255,255,.45);color:rgba(255,255,255,.7);background:rgba(255,255,255,.1)}
+.slot.full .bub{background:var(--bord);color:#fff;border:2px solid rgba(255,255,255,.75)}
+.slot .lb{max-width:100%;font-size:10px;font-weight:600;color:#fff;background:rgba(0,0,0,.45);
+  padding:1px 5px;border-radius:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.plrow{display:flex;align-items:center;gap:7px;padding:7px 0;border-bottom:1px solid var(--line)}
+.plrow:last-child{border:0}
+.plrow .nm{flex:1;min-width:0}
+.plrow .nm b{display:block;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.plrow .nm span{font-size:11px;color:var(--soft)}
+.plrow.on{background:#ECFDF5;border-radius:9px;padding-left:7px;padding-right:7px}
+.cnt{display:flex;align-items:center;gap:4px;flex:none}
+.cnt .add{height:34px;min-width:38px;border-radius:9px;background:var(--bord);color:#fff;
+  font-size:12.5px;font-weight:800;padding:0 8px}
+.cnt .add.alt{background:var(--neutral)}
+.cnt .sub{width:26px;height:26px;border-radius:7px;background:var(--ice);color:var(--soft);font-size:15px}
+.mini-in{width:46px;padding:7px 4px;text-align:center;font-size:13px}
+.minbar{display:flex;align-items:center;gap:8px;padding:5px 0}
+.minbar .nm{width:110px;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.minbar .tr{flex:1;height:7px;background:var(--ice);border-radius:99px;overflow:hidden}
+.minbar .tr i{display:block;height:100%;background:var(--cel)}
+.minbar .tr i.zero{background:var(--no)}
+.minbar .vl{width:38px;text-align:right;font-family:Archivo;font-weight:700;font-size:13px}
+.backlink{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;
+  color:var(--soft);margin-bottom:10px}
+
+/* ===== convocazione ===== */
+.convrow{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)}
+.convrow:last-child{border:0}
+.convrow .nm{flex:1;min-width:0}
+.convrow .nm b{display:block;font-size:14.5px;font-weight:600}
+.convrow .nm span{font-size:11.5px;color:var(--soft)}
+.tick{width:30px;height:30px;border-radius:9px;border:2px solid var(--line);flex:none;
+  display:flex;align-items:center;justify-content:center;font-size:16px;color:transparent}
+.convrow[aria-pressed="true"] .tick{background:var(--ok);border-color:var(--ok);color:#fff}
+.freq{font-family:Archivo;font-weight:700;font-size:12px;padding:3px 8px;border-radius:7px;flex:none}
+.freq.hi{background:#DCFCE7;color:#15803D}
+.freq.mid{background:#FEF3C7;color:#B45309}
+.freq.lo{background:#FFE4E6;color:#BE123C}
+.preview{width:100%;border:1px solid var(--line);border-radius:12px;margin-top:12px;display:block}
 </style>
 </head>
 <body>
@@ -190,11 +248,11 @@ textarea{resize:vertical}
    un backup ogni tanto è indispensabile: lo fai da Impostazioni. */
 
 const KEY = "miracolifc.v1";
-const BLANK = { club:"Miracoli FC", site:"Campo dei Miracoli", teams:[], players:[],
+const BLANK = { club:"Miracoli FC", site:"Campo dei Miracoli", coach:"", phone:"", noteConv:"",
+                logo:null, teams:[], players:[],
                 sessions:[], att:{}, matches:[], current:null };
 let db = load();
 let tab = "appello";
-let sessDate = today();
 
 function load(){
   try{
@@ -262,7 +320,7 @@ function render(){
   document.getElementById("clubname").textContent = db.club;
   document.getElementById("clubsub").textContent = db.site;
   document.querySelectorAll("nav button").forEach(b =>
-    b.setAttribute("aria-current", b.dataset.tab === tab));
+    b.setAttribute("aria-current", b.dataset.tab === (tab === "roll" ? "appello" : ["match","conv"].includes(tab) ? "gare" : tab)));
 
   const sel = document.getElementById("teamsel");
   sel.innerHTML = db.teams.map(t =>
@@ -272,7 +330,7 @@ function render(){
 
   const v = document.getElementById("view");
   if(!db.teams.length){ v.innerHTML = firstRun(); return; }
-  v.innerHTML = ({appello:viewAppello, gare:viewGare, rosa:viewRosa, report:viewReport})[tab]();
+  v.innerHTML = ({appello:viewAppello, roll:viewRoll, gare:viewGare, rosa:viewRosa, report:viewReport, match:viewMatch, conv:viewConv})[tab]();
 }
 
 /* ============ PRIMO AVVIO ============ */
@@ -386,16 +444,113 @@ function saveBulk(){
   save(); closeSheet(); render(); toast(n + " atleti aggiunti");
 }
 
-/* ============ APPELLO ============ */
-function viewAppello(){
-  const r = roster();
-  if(!r.length) return `<div class="card"><div class="empty">
-    <b>Prima la rosa</b>Aggiungi gli atleti dalla scheda Rosa, poi torna qui.</div></div>`;
+/* ============ ALLENAMENTI ============ */
+/* Gli allenamenti si creano in anticipo e si aprono il giorno che
+   servono: a bordo campo non si ha voglia di compilare un modulo. */
 
-  const s = ensureSession(sessDate);
-  const a = db.att[s.id];
+let curSess = null;
+const sessById = id => db.sessions.find(s => s.id === id);
+function attOf(s){ if(!db.att[s.id]) db.att[s.id] = {}; return db.att[s.id]; }
+
+function sessCounts(s){
+  const a = db.att[s.id] || {};
+  const r = roster();
   const c = {P:0,A:0,G:0,I:0}; let done = 0;
   r.forEach(p => { const st = a[p.id]?.s; if(st){ c[st]++; done++; } });
+  return {...c, done, tot:r.length};
+}
+
+/* --- elenco --- */
+function viewAppello(){
+  if(!roster().length) return `<div class="card"><div class="empty">
+    <b>Prima la rosa</b>Aggiungi gli atleti dalla scheda Rosa, poi torna qui.</div></div>`;
+
+  const ss = db.sessions.filter(s => s.teamId === db.current).sort((a,b)=>b.date.localeCompare(a.date));
+  const t = today();
+  const next = ss.filter(s => s.date >= t).sort((a,b)=>a.date.localeCompare(b.date));
+  const past = ss.filter(s => s.date < t);
+
+  const card = s => {
+    const c = sessCounts(s);
+    const fatto = c.done > 0;
+    return `<div class="card" style="border-left:4px solid ${fatto?"var(--ok)":"var(--cel)"}">
+      <div style="display:flex;align-items:flex-start;gap:10px">
+        <div style="flex:1;min-width:0">
+          <h2 style="text-transform:capitalize">${dLong(s.date)}</h2>
+          <p class="muted">${s.time || "17:30"} · ${E(s.pitch || "Campo A")}${
+            fatto ? ` · <b style="color:var(--ok)">${c.P}/${c.tot} presenti</b>` : " · appello da fare"}</p>
+          ${s.notes ? `<p class="muted" style="margin-top:4px">${E(s.notes)}</p>` : ""}
+        </div>
+        <button class="mini" onclick="editSession('${s.id}')" aria-label="Modifica">✎</button>
+      </div>
+      <button class="btn ${fatto?"ghost":"primary"} sm" style="width:100%;margin-top:10px"
+        onclick="openSess('${s.id}')">${fatto ? "Rivedi l'appello" : "Fai l'appello"}</button>
+    </div>`;
+  };
+
+  return `
+  <button class="btn primary" onclick="quickToday()">Appello di oggi</button>
+  <button class="btn ghost" style="margin-top:9px;margin-bottom:14px" onclick="editSession()">
+    Programma un allenamento</button>
+
+  ${next.length ? `<h3 class="muted" style="margin:0 0 8px">In programma</h3>${next.map(card).join("")}` : ""}
+  ${past.length ? `<h3 class="muted" style="margin:18px 0 8px">Svolti</h3>${past.slice(0,20).map(card).join("")}` : ""}
+  ${!ss.length ? `<div class="card"><div class="empty"><b>Nessun allenamento</b>
+     Programmane uno, oppure usa il tasto in alto per fare l'appello di oggi.</div></div>` : ""}`;
+}
+
+function quickToday(){
+  let s = sessionFor(today());
+  if(!s){
+    s = {id:uid(), teamId:db.current, date:today(), time:"17:30", pitch:"Campo A", notes:"", closed:false};
+    db.sessions.push(s); db.att[s.id] = {}; save();
+  }
+  openSess(s.id);
+}
+function openSess(id){ curSess = id; tab = "roll"; render(); window.scrollTo(0,0); }
+
+function editSession(id){
+  const s = sessById(id) || {date:today(), time:"17:30", pitch:"Campo A", notes:""};
+  sheet(`<h3>${id ? "Modifica allenamento" : "Nuovo allenamento"}</h3>
+    <div class="row2">
+      <div><label for="sd">Data</label><input id="sd" type="date" value="${s.date}"></div>
+      <div><label for="st">Ora</label><input id="st" type="time" value="${s.time || "17:30"}"></div>
+    </div>
+    <label for="sp">Campo</label><input id="sp" value="${E(s.pitch || "")}" placeholder="Campo A">
+    <label for="sn">Note (solo per te)</label>
+    <textarea id="sn" rows="2" placeholder="Es. lavoro sui cambi di direzione">${E(s.notes || "")}</textarea>
+    <button class="btn primary" style="margin-top:14px" onclick="saveSession('${id || ""}')">Salva</button>
+    ${id ? `<button class="btn ghost" style="margin-top:9px" onclick="delSession('${id}')">
+      Elimina l'allenamento</button>` : ""}`);
+}
+function saveSession(id){
+  const g = i => document.getElementById(i).value;
+  const data = {date:g("sd"), time:g("st"), pitch:g("sp").trim() || "Campo A", notes:g("sn").trim()};
+  const clash = db.sessions.find(x => x.teamId === db.current && x.date === data.date && x.id !== id);
+  if(clash) return toast("C'è già un allenamento in quella data");
+  if(id) Object.assign(sessById(id), data);
+  else {
+    const s = {id:uid(), teamId:db.current, closed:false, ...data};
+    db.sessions.push(s); db.att[s.id] = {};
+  }
+  save(); closeSheet(); render();
+}
+function delSession(id){
+  const c = sessCounts(sessById(id));
+  if(c.done && !confirm("L'appello di questo allenamento è già stato fatto. Eliminarlo comunque?")) return;
+  if(!c.done && !confirm("Eliminare l'allenamento?")) return;
+  db.sessions = db.sessions.filter(s => s.id !== id);
+  delete db.att[id];
+  if(curSess === id){ curSess = null; tab = "appello"; }
+  save(); closeSheet(); render();
+}
+
+/* --- appello vero e proprio --- */
+function viewRoll(){
+  const s = sessById(curSess);
+  if(!s){ tab = "appello"; return viewAppello(); }
+  const r = roster(), a = attOf(s);
+  const c = sessCounts(s);
   const pct = r.length ? Math.round(c.P / r.length * 100) : 0;
 
   const rows = r.map(p => {
@@ -419,18 +574,21 @@ function viewAppello(){
   }).join("");
 
   return `
+  <button class="backlink" onclick="go('appello')">← Tutti gli allenamenti</button>
+
   <div class="sess">
     <div class="top">
       <div>
-        <input type="date" value="${sessDate}" onchange="sessDate=this.value;render()">
-        <div style="font-size:12.5px;color:rgba(255,255,255,.7);margin-top:6px">${dLong(sessDate)}</div>
+        <div style="font-size:15px;font-weight:700;text-transform:capitalize">${dLong(s.date)}</div>
+        <div style="font-size:12.5px;color:rgba(255,255,255,.7);margin-top:3px">
+          ${s.time || "17:30"} · ${E(s.pitch || "Campo A")}</div>
       </div>
       <div class="tally">
         <div class="num">${c.P}<small>/${r.length}</small></div>
         <p>${pct}% presenti</p>
       </div>
     </div>
-    <div class="prog"><i style="width:${r.length?done/r.length*100:0}%"></i></div>
+    <div class="prog"><i style="width:${r.length?c.done/r.length*100:0}%"></i></div>
     <button class="btn accent" style="margin-top:11px" onclick="allPresent()">Segna tutti presenti</button>
   </div>
 
@@ -441,44 +599,44 @@ function viewAppello(){
 
   <ul class="plist">${rows}</ul>
 
-  <button class="btn ${done===r.length?"primary":"ghost"}" onclick="shareAppello()"
-    ${done<r.length?"disabled":""}>
-    ${done<r.length ? `Mancano ${r.length-done} atleti` : "Condividi il riepilogo"}</button>
+  <button class="btn ${c.done===r.length?"primary":"ghost"}" onclick="shareAppello()"
+    ${c.done<r.length?"disabled":""}>
+    ${c.done<r.length ? `Mancano ${r.length-c.done} atleti` : "Condividi il riepilogo"}</button>
+  <button class="btn ghost" style="margin-top:9px" onclick="exportTraining()">Scarica l'allenamento (Excel)</button>
   <p class="muted" style="text-align:center;margin-top:9px">Le presenze si salvano da sole.</p>`;
 }
 
 function mark(pid, st){
-  const s = ensureSession(sessDate);
-  db.att[s.id][pid] = Object.assign(db.att[s.id][pid] || {}, {s:st});
+  const a = attOf(sessById(curSess));
+  a[pid] = Object.assign(a[pid] || {}, {s:st});
   save();
   if(navigator.vibrate) navigator.vibrate(8);
   render();
 }
 function allPresent(){
-  const s = ensureSession(sessDate);
-  roster().forEach(p => db.att[s.id][p.id] = Object.assign(db.att[s.id][p.id]||{}, {s:"P"}));
+  const a = attOf(sessById(curSess));
+  roster().forEach(p => a[p.id] = Object.assign(a[p.id] || {}, {s:"P"}));
   save(); render();
 }
 function noteFor(pid){
-  const s = ensureSession(sessDate);
-  const p = db.players.find(x=>x.id===pid);
+  const a = attOf(sessById(curSess));
+  const p = db.players.find(x => x.id === pid);
   sheet(`<h3>Nota su ${E(p.first)} ${E(p.last)}</h3>
     <p class="muted">Resta sul tuo telefono, non finisce in nessun messaggio.</p>
-    <textarea id="nt" rows="3" placeholder="Es. ha lavorato a parte, fastidio al ginocchio">${E(db.att[s.id][pid]?.n||"")}</textarea>
+    <textarea id="nt" rows="3" placeholder="Es. ha lavorato a parte, fastidio al ginocchio">${E(a[pid]?.n||"")}</textarea>
     <button class="btn primary" style="margin-top:12px" onclick="saveNote('${pid}')">Salva nota</button>`);
 }
 function saveNote(pid){
-  const s = ensureSession(sessDate);
+  const a = attOf(sessById(curSess));
   const t = document.getElementById("nt").value.trim();
-  db.att[s.id][pid] = Object.assign(db.att[s.id][pid]||{}, {n: t || undefined});
+  a[pid] = Object.assign(a[pid] || {}, {n: t || undefined});
   save(); closeSheet(); render();
 }
 function shareAppello(){
-  const s = sessionFor(sessDate), a = db.att[s.id];
-  const by = k => roster().filter(p => a[p.id]?.s === k)
-                          .map(p => `• ${p.last} ${p.first}`).join("\n");
-  let txt = `${db.club} — ${team().name}\nAllenamento di ${dLong(sessDate)}\n`;
-  const pres = roster().filter(p=>a[p.id]?.s==="P").length;
+  const s = sessById(curSess), a = attOf(s);
+  const by = k => roster().filter(p => a[p.id]?.s === k).map(p => `• ${p.last} ${p.first}`).join("\n");
+  const pres = roster().filter(p => a[p.id]?.s === "P").length;
+  let txt = `${db.club} — ${team().name}\nAllenamento di ${dLong(s.date)}\n`;
   txt += `\nPresenti: ${pres}/${roster().length}\n`;
   [["A","Assenti"],["G","Giustificati"],["I","Infortunati"]].forEach(([k,lab])=>{
     const l = by(k); if(l) txt += `\n${lab}:\n${l}\n`;
@@ -499,6 +657,7 @@ function viewGare(){
         <button class="btn ghost sm" style="width:auto" onclick="pickCallups('${m.id}')">Convocati</button>
         <button class="btn wa sm" style="width:auto" onclick="shareMatch('${m.id}')">Invia su WhatsApp</button>
       </div>
+      <button class="btn primary sm" style="width:100%;margin-top:9px" onclick="openMatch('${m.id}')">Apri la partita</button>
       <button class="btn ghost sm" style="width:100%;margin-top:9px" onclick="editMatch('${m.id}')">Modifica gara</button>
     </div>`;
   }).join("");
@@ -538,7 +697,7 @@ function saveMatch(id){
                 place:g("mp").trim(), address:g("ma").trim(), kit:g("mkit").trim(), notes:g("mn").trim()};
   if(!data.opponent) return toast("Manca l'avversario");
   if(id) Object.assign(db.matches.find(x=>x.id===id), data);
-  else db.matches.push({id:uid(), teamId:db.current, callups:[], ...data});
+  else db.matches.push(normMatch({id:uid(), teamId:db.current, callups:[], ...data}));
   save(); closeSheet(); render();
 }
 function delMatch(id){
@@ -627,8 +786,9 @@ function viewReport(){
 
   <div class="card">
     <h2>Per la segreteria</h2>
-    <p class="muted">Scarica il registro completo in formato Excel.</p>
-    <button class="btn ghost" style="margin-top:11px" onclick="exportCsv()">Scarica il registro (CSV)</button>
+    <p class="muted">Rosa, presenze, partite e minutaggio in un unico file a più fogli.</p>
+    <button class="btn primary" style="margin-top:11px" onclick="exportAll()">Scarica tutto (Excel)</button>
+    <button class="btn ghost" style="margin-top:9px" onclick="exportCsv()">Solo le presenze (CSV)</button>
   </div>`;
 }
 
@@ -677,6 +837,9 @@ function openSettings(){
     <label for="cs">Struttura</label><input id="cs" value="${E(db.site)}">
     <button class="btn primary" style="margin-top:12px" onclick="saveSettings()">Salva</button>
 
+    <label for="lg">Logo della società (per la convocazione)</label>
+    <input id="lg" type="file" accept="image/*" onchange="setLogo(this)">
+
     <h3 style="margin-top:22px">Gruppi squadra</h3>
     <button class="btn ghost" style="margin-top:9px" onclick="newTeam()">Aggiungi un gruppo</button>
 
@@ -688,6 +851,12 @@ function openSettings(){
     <label for="rf" style="margin-top:14px">Ripristina da un backup</label>
     <input id="rf" type="file" accept="application/json" onchange="restore(this)">
     <button class="btn ghost" style="margin-top:20px;color:var(--no)" onclick="wipe()">Cancella tutto</button>`);
+}
+function setLogo(input){
+  const f = input.files[0]; if(!f) return;
+  const rd = new FileReader();
+  rd.onload = () => { db.logo = rd.result; save(); toast("Logo caricato"); };
+  rd.readAsDataURL(f);
 }
 function saveSettings(){
   db.club = document.getElementById("cn").value.trim() || "Miracoli FC";
@@ -737,7 +906,7 @@ function demo(){
     db.players.push({id:uid(), teamId:t.id, last, first, num, cert: off===null?null:d(off)}));
 
   [21,19,14,12,7,5].forEach(ago => {
-    const s = {id:uid(), teamId:t.id, date:d(-ago), pitch:"Campo A", closed:true};
+    const s = {id:uid(), teamId:t.id, date:d(-ago), time:"17:30", pitch:"Campo A", notes:"", closed:true};
     db.sessions.push(s); db.att[s.id] = {};
     db.players.filter(p=>p.teamId===t.id).forEach((p,i) => {
       const k = (i*3 + ago) % 11;
@@ -752,6 +921,613 @@ function demo(){
     callups: db.players.filter(p=>p.teamId===t.id && !["Ferrara","Zanetti"].includes(p.last)).map(p=>p.id)});
 
   save(); render(); toast("Dati di esempio caricati");
+}
+
+
+/* ============ MATCHDAY ============ */
+const FORMS = {
+  "7v7":["1-2-3-1","1-3-2-1","1-2-2-2","1-3-1-2"],
+  "8v8":["1-3-3-1","1-3-2-2","1-2-3-2","1-4-2-1"],
+  "9v9":["1-3-3-2","1-4-3-1","1-3-4-1","1-4-2-2"]
+};
+let curMatch = null, period = 1, picked = null;
+
+function slotsOf(name){
+  const lines = name.split("-").slice(1).map(Number);
+  const out = [{id:"gk", lab:"P", x:50, y:91}];
+  lines.forEach((c, li) => {
+    const r = li===0 ? "d" : li===lines.length-1 ? "a" : "c";
+    const lab = r==="d" ? "D" : r==="c" ? "C" : "A";
+    const y = 74 - li*(56/Math.max(lines.length-1,1));
+    for(let i=0;i<c;i++) out.push({id:`${r}${li}${i}`, lab, x:100*(i+1)/(c+1), y});
+  });
+  return out;
+}
+function normMatch(m){
+  if(!m.format) m.format = "7v7";
+  if(!m.periods) m.periods = [20,20,20];
+  if(!m.formation || !FORMS[m.format].includes(m.formation)) m.formation = FORMS[m.format][0];
+  if(!m.lineups) m.lineups = {1:{},2:{},3:{}};
+  [1,2,3].forEach(p => { if(!m.lineups[p]) m.lineups[p] = {}; });
+  if(!m.events) m.events = [];
+  if(!m.callups) m.callups = [];
+  return m;
+}
+const theMatch = () => normMatch(db.matches.find(m => m.id === curMatch));
+function openMatch(id){ curMatch = id; period = 1; picked = null; tab = "match"; render(); window.scrollTo(0,0); }
+
+function minutesOf(m, pid){
+  return [1,2,3].reduce((sum,p) =>
+    Object.values(m.lineups[p]).includes(pid) ? sum + (+m.periods[p-1]||0) : sum, 0);
+}
+const periodsOf = (m,pid) => [1,2,3].filter(p => Object.values(m.lineups[p]).includes(pid)).length;
+const evCount = (m,pid,t) => m.events.filter(e => e.pid===pid && e.t===t).length;
+
+function viewMatch(){
+  const m = theMatch();
+  if(!m) { tab = "gare"; return viewGare(); }
+  const slots = slotsOf(m.formation);
+  const line = m.lineups[period];
+  const squad = roster().filter(p => m.callups.includes(p.id));
+  const inField = new Set(Object.values(line).filter(Boolean));
+
+  const bubbles = slots.map(s => {
+    const pid = line[s.id];
+    const p = pid ? db.players.find(x=>x.id===pid) : null;
+    return `<button class="slot ${p?"full":""}" style="left:${s.x}%;top:${s.y}%"
+      onclick="tapSlot('${s.id}')">
+      <span class="bub">${p ? (p.num ?? "–") : s.lab}</span>
+      ${p ? `<span class="lb">${E(p.last)}</span>` : ""}</button>`;
+  }).join("");
+
+  const rows = squad.map(p => `
+    <div class="plrow ${inField.has(p.id)?"on":""}">
+      <span class="jersey">${p.num ?? "–"}</span>
+      <span class="nm"><b>${E(p.last)} ${E(p.first)}</b>
+        <span>${minutesOf(m,p.id)}′ · ${periodsOf(m,p.id)}/3 tempi</span></span>
+      <span class="cnt">
+        ${evCount(m,p.id,"g") ? `<button class="sub" onclick="delEv('${p.id}','g')">−</button>` : ""}
+        <button class="add" onclick="addEv('${p.id}','g')">+G${evCount(m,p.id,"g")?" "+evCount(m,p.id,"g"):""}</button>
+      </span>
+      <span class="cnt">
+        ${evCount(m,p.id,"a") ? `<button class="sub" onclick="delEv('${p.id}','a')">−</button>` : ""}
+        <button class="add alt" onclick="addEv('${p.id}','a')">+A${evCount(m,p.id,"a")?" "+evCount(m,p.id,"a"):""}</button>
+      </span>
+    </div>`).join("");
+
+  const maxMin = Math.max(1, ...squad.map(p => minutesOf(m,p.id)));
+  const mins = [...squad].sort((a,b)=>minutesOf(m,a.id)-minutesOf(m,b.id)).map(p => {
+    const v = minutesOf(m,p.id);
+    return `<div class="minbar"><span class="nm">${E(p.last)} ${E(p.first)}</span>
+      <span class="tr"><i class="${v===0?"zero":""}" style="width:${v/maxMin*100}%"></i></span>
+      <span class="vl">${v}′</span></div>`;
+  }).join("");
+
+  const unused = squad.filter(p => minutesOf(m,p.id)===0);
+  const scorers = squad.filter(p=>evCount(m,p.id,"g")>0)
+    .map(p=>`${p.last}${evCount(m,p.id,"g")>1?" ("+evCount(m,p.id,"g")+")":""}`).join(", ");
+  const assist = squad.filter(p=>evCount(m,p.id,"a")>0)
+    .map(p=>`${p.last}${evCount(m,p.id,"a")>1?" ("+evCount(m,p.id,"a")+")":""}`).join(", ");
+  const gol = m.events.filter(e=>e.t==="g").length;
+
+  return `
+  <button class="backlink" onclick="go('gare')">← Tutte le gare</button>
+
+  <div class="card">
+    <h2>${E(db.club)} — ${E(m.opponent)}</h2>
+    <p class="muted">${dLong(m.date)} · ${m.venue==="home"?"in casa":"in trasferta"} · ritrovo ${m.meet}</p>
+    <div class="row2" style="margin-top:11px">
+      <div><label for="fm">Formato</label>
+        <select id="fm" onchange="setFormat(this.value)">
+          ${Object.keys(FORMS).map(f=>`<option ${m.format===f?"selected":""}>${f}</option>`).join("")}
+        </select></div>
+      <div><label for="fo">Modulo</label>
+        <select id="fo" onchange="setFormation(this.value)">
+          ${FORMS[m.format].map(f=>`<option ${m.formation===f?"selected":""}>${f}</option>`).join("")}
+        </select></div>
+    </div>
+    <label>Durata dei tre tempi (minuti)</label>
+    <div style="display:flex;gap:8px">
+      ${[0,1,2].map(i=>`<input class="mini-in" type="number" min="1" max="45" value="${m.periods[i]}"
+         onchange="setMin(${i}, this.value)">`).join("")}
+      <span class="muted" style="align-self:center">totale ${m.periods.reduce((a,b)=>a+ +b,0)}′</span>
+    </div>
+    ${m.callups.length ? "" : `<p class="muted" style="margin-top:11px;color:var(--no)">
+       Nessun convocato: selezionali prima di schierare la squadra.</p>`}
+    <button class="btn accent sm" style="width:100%;margin-top:11px" onclick="openConv()">
+      Crea la convocazione (${m.callups.length})</button>
+    <button class="btn ghost sm" style="width:100%;margin-top:9px" onclick="pickCallups('${m.id}')">
+      Modifica i convocati</button>
+  </div>
+
+  <div class="mdbar">
+    ${[1,2,3].map(p=>`<button aria-pressed="${period===p}" onclick="setPeriod(${p})">
+      ${p}° tempo<small>${m.periods[p-1]}′</small></button>`).join("")}
+  </div>
+
+  <div class="pitch">
+    <svg viewBox="0 0 100 133" preserveAspectRatio="none">
+      <g fill="none" stroke="rgba(255,255,255,.35)" stroke-width="0.6">
+        <rect x="3" y="3" width="94" height="127"/>
+        <line x1="3" y1="66.5" x2="97" y2="66.5"/>
+        <circle cx="50" cy="66.5" r="13"/>
+        <rect x="25" y="3" width="50" height="17"/><rect x="38" y="3" width="24" height="7"/>
+        <rect x="25" y="113" width="50" height="17"/><rect x="38" y="123" width="24" height="7"/>
+      </g>
+    </svg>
+    ${bubbles}
+  </div>
+
+  <div class="counts">
+    <span><b>${inField.size}</b>/${slots.length} in campo</span>
+    <span><b>${gol}</b> gol</span>
+    <span>${period}° tempo</span>
+  </div>
+  <div class="row2" style="margin-bottom:12px">
+    ${period>1 ? `<button class="btn ghost sm" style="width:auto" onclick="copyPrev()">Copia dal ${period-1}° tempo</button>` : `<span></span>`}
+    <button class="btn ghost sm" style="width:auto" onclick="clearPeriod()">Svuota il tempo</button>
+  </div>
+  ${picked ? `<p class="muted" style="background:rgba(91,192,235,.15);padding:9px 12px;border-radius:10px;color:#0E5A7D">
+     ${E(db.players.find(p=>p.id===picked).last)} selezionato — tocca una posizione sul campo.</p>` : ""}
+
+  <div class="card">
+    <h2>Convocati</h2>
+    <p class="muted">Tocca il nome per selezionarlo, poi lo slot in campo.</p>
+    <div style="margin-top:9px">${rows || `<p class="muted">Nessun convocato.</p>`}</div>
+  </div>
+
+  <div class="card">
+    <h2>Riepilogo</h2>
+    ${unused.length ? `<p class="muted" style="background:#FEF3C7;color:#92400E;padding:9px 12px;border-radius:10px;margin:8px 0">
+       Non sono ancora entrati: ${unused.map(p=>E(p.last)).join(", ")}</p>` : ""}
+    ${scorers ? `<p class="muted" style="color:var(--ink)"><b>Gol:</b> ${E(scorers)}</p>` : ""}
+    ${assist ? `<p class="muted" style="color:var(--ink)"><b>Assist:</b> ${E(assist)}</p>` : ""}
+    <div style="margin-top:12px">${mins}</div>
+    <button class="btn wa" style="margin-top:14px" onclick="shareTabellino()">Invia il tabellino su WhatsApp</button>
+    <button class="btn ghost" style="margin-top:9px" onclick="exportMatch()">Scarica la partita (Excel)</button>
+  </div>`;
+}
+
+function setPeriod(p){ period = p; picked = null; render(); }
+function setFormat(f){
+  const m = theMatch();
+  m.format = f; m.formation = FORMS[f][0]; m.lineups = {1:{},2:{},3:{}};
+  save(); render();
+}
+function setFormation(f){
+  const m = theMatch();
+  m.formation = f; m.lineups = {1:{},2:{},3:{}};
+  save(); render();
+}
+function setMin(i, v){
+  const m = theMatch();
+  m.periods[i] = Math.max(1, Math.min(45, +v || 1));
+  save(); render();
+}
+function tapSlot(sid){
+  const m = theMatch(), line = m.lineups[period];
+  if(picked){
+    Object.keys(line).forEach(k => { if(line[k] === picked) line[k] = null; });
+    line[sid] = picked; picked = null;
+    save(); if(navigator.vibrate) navigator.vibrate(8); return render();
+  }
+  if(line[sid]){ line[sid] = null; save(); return render(); }
+  const free = roster().filter(p => m.callups.includes(p.id) && !Object.values(line).includes(p.id));
+  if(!free.length) return toast("Tutti i convocati sono già in campo");
+  sheet(`<h3>Chi va in questa posizione?</h3>
+    <div class="chiplist">${free.map(p=>`<button class="chip"
+      onclick="assignSlot('${sid}','${p.id}')">${p.num ?? "–"} ${E(p.last)}</button>`).join("")}</div>`);
+}
+function assignSlot(sid, pid){
+  const line = theMatch().lineups[period];
+  Object.keys(line).forEach(k => { if(line[k] === pid) line[k] = null; });
+  line[sid] = pid;
+  save(); closeSheet(); render();
+}
+function copyPrev(){
+  const m = theMatch();
+  m.lineups[period] = Object.assign({}, m.lineups[period-1]);
+  save(); render();
+}
+function clearPeriod(){ theMatch().lineups[period] = {}; save(); render(); }
+function addEv(pid, t){
+  theMatch().events.push({id:uid(), pid, t, p:period});
+  save(); if(navigator.vibrate) navigator.vibrate(12); render();
+}
+function delEv(pid, t){
+  const m = theMatch();
+  for(let i=m.events.length-1;i>=0;i--){
+    if(m.events[i].pid===pid && m.events[i].t===t){ m.events.splice(i,1); break; }
+  }
+  save(); render();
+}
+function shareTabellino(){
+  const m = theMatch(), squad = roster().filter(p=>m.callups.includes(p.id));
+  const gol = m.events.filter(e=>e.t==="g").length;
+  let t = `⚽ ${db.club} — ${m.opponent}\n${dLong(m.date)} · ${m.format}\n\n`;
+  t += `Gol fatti: ${gol}\n`;
+  const sc = squad.filter(p=>evCount(m,p.id,"g")>0)
+    .map(p=>`• ${p.last} ${p.first}${evCount(m,p.id,"g")>1?" ("+evCount(m,p.id,"g")+")":""}`).join("\n");
+  const as = squad.filter(p=>evCount(m,p.id,"a")>0)
+    .map(p=>`• ${p.last} ${p.first}${evCount(m,p.id,"a")>1?" ("+evCount(m,p.id,"a")+")":""}`).join("\n");
+  if(sc) t += `\nMarcatori:\n${sc}\n`;
+  if(as) t += `\nAssist:\n${as}\n`;
+  t += `\nMinuti giocati:\n`;
+  t += [...squad].sort((a,b)=>minutesOf(m,b.id)-minutesOf(m,a.id))
+        .map(p=>`• ${p.last} ${p.first}: ${minutesOf(m,p.id)}′`).join("\n");
+  t += `\n\nBravi ragazzi! 💪`;
+  shareText(t, "Tabellino");
+}
+
+
+/* ============ CONVOCAZIONE STAMPABILE ============ */
+const NOTE_DEF = "Portare sempre parastinchi e borraccia personale.\n" +
+  "Fate una buona colazione, almeno 1 ora e 30 / 2 ore prima della gara.\n" +
+  "Fare sapere con anticipo eventuali assenze.";
+
+function openConv(){ tab = "conv"; render(); window.scrollTo(0,0); }
+
+/* Presenze degli ultimi 7 giorni prima della gara: il dato su cui il
+   mister decide chi convocare. */
+function weekStats(pid, beforeDate){
+  const to = new Date(beforeDate + "T12:00"), from = new Date(to - 7*86400000);
+  const ss = db.sessions.filter(s => s.teamId === db.current &&
+    new Date(s.date+"T12:00") > from && new Date(s.date+"T12:00") <= to);
+  let tot = 0, pres = 0;
+  ss.forEach(s => { const st = db.att[s.id]?.[pid]?.s; if(st){ tot++; if(st === "P") pres++; } });
+  return {tot, pres, last: ss.length ? db.att[ss[ss.length-1].id]?.[pid]?.s : null};
+}
+
+function viewConv(){
+  const m = theMatch();
+  if(!m){ tab = "gare"; return viewGare(); }
+  const r = roster();
+
+  const rows = r.map(p => {
+    const w = weekStats(p.id, m.date);
+    const pct = w.tot ? Math.round(w.pres/w.tot*100) : null;
+    const cls = pct === null ? "mid" : pct >= 75 ? "hi" : pct >= 50 ? "mid" : "lo";
+    const cs = certState(p);
+    const warn = cs === "expired" ? `<span class="flag exp">Certificato scaduto</span>`
+               : cs === "missing" ? `<span class="flag exp">Certificato mancante</span>` : "";
+    return `<div class="convrow" aria-pressed="${m.callups.includes(p.id)}"
+        onclick="toggleConv('${p.id}', this)">
+      <span class="tick">✓</span>
+      <span class="jersey">${p.num ?? "–"}</span>
+      <span class="nm"><b>${E(p.last)} ${E(p.first)}</b>
+        <span>${w.tot ? `${w.pres}/${w.tot} allenamenti questa settimana` : "nessun allenamento registrato"}</span>
+        ${warn}</span>
+      <span class="freq ${cls}">${pct === null ? "–" : pct + "%"}</span>
+    </div>`;
+  }).join("");
+
+  return `
+  <button class="backlink" onclick="go('match')">← Torna alla partita</button>
+
+  <div class="card">
+    <h2>Convocazione</h2>
+    <p class="muted">${E(db.club)} — ${E(m.opponent)} · ${dLong(m.date)}</p>
+    <p class="muted" style="margin-top:8px">Accanto a ogni nome trovi le presenze
+      agli allenamenti della settimana prima della gara. Tocca i nomi per convocarli.</p>
+    <div class="row2" style="margin-top:12px">
+      <button class="btn ghost sm" style="width:auto" onclick="convAll(true)">Seleziona tutti</button>
+      <button class="btn ghost sm" style="width:auto" onclick="convAll(false)">Deseleziona</button>
+    </div>
+  </div>
+
+  <div class="card"><div>${rows}</div></div>
+
+  <div class="card">
+    <h2>Dati del foglio</h2>
+    <div class="row2">
+      <div><label for="ci">Istruttore</label><input id="ci" value="${E(db.coach||"")}" placeholder="Cognome"></div>
+      <div><label for="cp">Cellulare</label><input id="cp" value="${E(db.phone||"")}" inputmode="tel"></div>
+    </div>
+    <label for="cd">Indicazioni per le famiglie</label>
+    <textarea id="cd" rows="4">${E(db.noteConv || NOTE_DEF)}</textarea>
+    <label for="ck">Abbigliamento</label>
+    <input id="ck" value="${E(m.kit||"")}" placeholder="Maglietta azzurra, tuta di rappresentanza">
+    <button class="btn primary" style="margin-top:14px" onclick="makeConv()">
+      Genera la convocazione (${m.callups.length})</button>
+  </div>
+
+  <div id="convout"></div>`;
+}
+
+function toggleConv(pid, el){
+  const m = theMatch();
+  const i = m.callups.indexOf(pid);
+  if(i < 0) m.callups.push(pid); else m.callups.splice(i, 1);
+  el.setAttribute("aria-pressed", i < 0);
+  save();
+  const b = document.querySelector('#view .btn.primary');
+  if(b) b.textContent = `Genera la convocazione (${m.callups.length})`;
+}
+function convAll(on){
+  const m = theMatch();
+  m.callups = on ? roster().map(p => p.id) : [];
+  save(); render();
+}
+
+/* --- Disegno su canvas: nessuna libreria, funziona offline --- */
+async function makeConv(){
+  const m = theMatch();
+  db.coach = document.getElementById("ci").value.trim();
+  db.phone = document.getElementById("cp").value.trim();
+  db.noteConv = document.getElementById("cd").value.trim();
+  m.kit = document.getElementById("ck").value.trim();
+  save();
+
+  if(!m.callups.length) return toast("Seleziona almeno un convocato");
+
+  const names = roster().filter(p => m.callups.includes(p.id))
+    .sort((a,b) => a.last.localeCompare(b.last, "it"))
+    .map(p => p.last + (p.first ? " " + p.first.slice(0,1) + "." : ""));
+
+  const canvas = await drawConv(m, names);
+  const out = document.getElementById("convout");
+  out.innerHTML = `<div class="card"><h2>Pronta da inviare</h2>
+    <img class="preview" src="${canvas.toDataURL("image/png")}" alt="Convocazione">
+    <button class="btn wa" style="margin-top:12px" onclick="shareConv()">Condividi su WhatsApp</button>
+    <button class="btn ghost" style="margin-top:9px" onclick="dlConv()">Salva l'immagine</button>
+    <p class="muted" style="margin-top:9px">Su iPhone e Android il tasto verde apre la scelta
+      del gruppo con l'immagine già allegata.</p></div>`;
+  window._conv = canvas;
+  out.scrollIntoView({behavior:"smooth", block:"start"});
+}
+
+function drawConv(m, names){
+  return new Promise(resolve => {
+    const W = 1000, H = 1414;
+    const c = document.createElement("canvas");
+    c.width = W; c.height = H;
+    const g = c.getContext("2d");
+    g.fillStyle = "#fff"; g.fillRect(0, 0, W, H);
+
+    const M = 60, w = W - M*2;
+    let y = M;
+    const F = (sz, b) => `${b ? "bold " : ""}${sz}px Arial, Helvetica, sans-serif`;
+    const box = (x0, y0, ww, hh, fill) => {
+      if(fill){ g.fillStyle = fill; g.fillRect(x0, y0, ww, hh); }
+      g.strokeStyle = "#000"; g.lineWidth = 2; g.strokeRect(x0, y0, ww, hh);
+    };
+    const center = (t, yy, sz, col) => {
+      g.font = F(sz, true); g.fillStyle = col; g.textAlign = "center";
+      g.fillText(t, W/2, yy);
+    };
+    const left = (lbl, val, yy, sz) => {
+      g.textAlign = "left"; g.font = F(sz, true);
+      g.fillStyle = "#C00000"; g.fillText(lbl, M + 14, yy);
+      const off = g.measureText(lbl).width;
+      g.fillStyle = "#000"; g.fillText(val, M + 14 + off + 8, yy);
+    };
+
+    const paint = () => {
+      /* intestazione */
+      box(M, y, w, 120);
+      g.textAlign = "center"; g.font = F(30, true); g.fillStyle = "#7B1123";
+      g.fillText(db.club.toUpperCase(), W/2, y + 58);
+      g.font = F(19, false); g.fillStyle = "#555";
+      g.fillText((db.site || "").toUpperCase(), W/2, y + 88);
+      if(db.logo){
+        try{ g.drawImage(window._logoImg, M + 16, y + 16, 88, 88); }catch(e){}
+      }
+      y += 120;
+
+      /* blocco informazioni */
+      box(M, y, w, 46); center("CATEGORIA", y + 32, 26, "#0070C0"); y += 46;
+      box(M, y, w, 46); center((team().name || "").toUpperCase(), y + 32, 25, "#000"); y += 46;
+      box(M, y, w, 46); center("INCONTRO", y + 32, 26, "#0070C0"); y += 46;
+      const sfida = m.venue === "home"
+        ? `${db.club} - ${m.opponent}` : `${m.opponent} - ${db.club}`;
+      box(M, y, w, 46); center(sfida.toUpperCase(), y + 32, 25, "#000"); y += 46;
+
+      const dat = new Date(m.date + "T12:00").toLocaleDateString("it-IT");
+      const info = [
+        ["DATA:", dat, null],
+        ["APPUNTAMENTO ALLE ORE:", m.meet, "#FFFF00"],
+        ["INDIRIZZO CAMPO:", (m.place + (m.address ? " — " + m.address : "")).toUpperCase(), null],
+        ["INIZIO GARA ALLE ORE:", m.kick, null],
+        ["ISTRUTTORE:", (db.coach || "").toUpperCase(), null],
+        ["CELLULARE:", db.phone || "", null],
+      ];
+      info.forEach(([l, v, bg]) => { box(M, y, w, 42, bg); left(l, v, y + 29, 22); y += 42; });
+
+      /* elenco convocati su due colonne, 11 per colonna */
+      y += 26;
+      const half = w/2, numW = 56, rowH = 42, per = 11;
+      for(let i = 0; i < per; i++){
+        [0, 1].forEach(col => {
+          const x0 = M + col*half;
+          const n = i + 1 + col*per;
+          box(x0, y, numW, rowH);
+          g.textAlign = "center"; g.font = F(21, true); g.fillStyle = "#000";
+          g.fillText(String(n), x0 + numW/2, y + 29);
+          box(x0 + numW, y, half - numW, rowH);
+          const nm = names[n - 1];
+          if(nm){
+            g.textAlign = "left"; g.font = F(21, true);
+            g.fillText(nm, x0 + numW + 14, y + 29);
+          }
+        });
+        y += rowH;
+      }
+
+      /* indicazioni per le famiglie */
+      y += 22;
+      const lines = [];
+      (db.noteConv || NOTE_DEF).split("\n").forEach(l => l.trim() && lines.push(l.trim()));
+      if(m.kit) lines.push("Presentarsi con: " + m.kit);
+      const bh = 28 + lines.length*30;
+      box(M, y, w, bh, "#FFFF00");
+      g.textAlign = "left"; g.font = F(20, true); g.fillStyle = "#C00000";
+      lines.forEach((l, i) => g.fillText(l, M + 14, y + 34 + i*30));
+
+      resolve(c);
+    };
+
+    if(db.logo){
+      const img = new Image();
+      img.onload = () => { window._logoImg = img; paint(); };
+      img.onerror = paint;
+      img.src = db.logo;
+    } else paint();
+  });
+}
+
+function dlConv(){
+  const a = document.createElement("a");
+  a.href = window._conv.toDataURL("image/png");
+  a.download = `convocazione-${theMatch().opponent.replace(/\s+/g,"-")}-${theMatch().date}.png`;
+  a.click();
+}
+function shareConv(){
+  window._conv.toBlob(async blob => {
+    const m = theMatch();
+    const file = new File([blob], `convocazione-${m.date}.png`, {type:"image/png"});
+    const testo = `Convocazione ${team().name} — ${db.club} vs ${m.opponent}, ${dLong(m.date)}. Ritrovo ${m.meet}.`;
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      try{ await navigator.share({files:[file], text:testo}); return; }catch(e){ if(e.name === "AbortError") return; }
+    }
+    dlConv();
+    toast("Immagine salvata: allegala tu al gruppo WhatsApp");
+  }, "image/png");
+}
+
+
+/* ============ ESPORTAZIONE EXCEL ============ */
+/* Formato SpreadsheetML 2003: è XML puro, quindi si genera senza
+   librerie e si apre in Excel, Numbers e Google Fogli mantenendo
+   più fogli nello stesso file. */
+
+function dlFile(name, content, mime){
+  const blob = new Blob([content], {type:mime});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
+}
+const X = v => String(v ?? "").replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+
+function toXls(sheets){
+  const cell = v => typeof v === "number"
+    ? `<Cell><Data ss:Type="Number">${v}</Data></Cell>`
+    : `<Cell><Data ss:Type="String">${X(v)}</Data></Cell>`;
+  const body = sheets.map(sh => `
+ <Worksheet ss:Name="${X(sh.name).slice(0,31)}"><Table>
+${sh.rows.map(r => `  <Row>${r.map(cell).join("")}</Row>`).join("\n")}
+ </Table></Worksheet>`).join("");
+  return `<?xml version="1.0"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">${body}
+</Workbook>`;
+}
+const XLSMIME = "application/vnd.ms-excel";
+const slug = t => String(t).replace(/[^\w]+/g, "-").replace(/^-|-$/g, "");
+const LAB = {P:"Presente", A:"Assente", G:"Giustificato", I:"Infortunato"};
+
+/* --- un singolo allenamento, subito dopo l'appello --- */
+function exportTraining(){
+  const sess = sessById(curSess);
+  if(!sess) return toast("Apri prima un allenamento");
+  const a = db.att[sess.id] || {};
+  const rows = [
+    [db.club, team().name],
+    ["Allenamento", dLong(sess.date)],
+    ["Campo", sess.pitch || ""],
+    [],
+    ["Numero","Cognome","Nome","Stato","Nota","Certificato"],
+  ];
+  roster().forEach(p => rows.push([
+    p.num ? Number(p.num) : "", p.last, p.first,
+    LAB[a[p.id]?.s] || "non registrato", a[p.id]?.n || "", p.cert || ""
+  ]));
+  const c = {P:0,A:0,G:0,I:0};
+  roster().forEach(p => { const st = a[p.id]?.s; if(st) c[st]++; });
+  rows.push([], ["Presenti", c.P], ["Assenti", c.A], ["Giustificati", c.G], ["Infortunati", c.I]);
+
+  dlFile(`allenamento-${sess.date}-${slug(team().name)}.xls`, toXls([{name:"Allenamento", rows}]), XLSMIME);
+  toast("File scaricato");
+}
+
+/* --- una singola partita, a fine gara --- */
+function exportMatch(){
+  const m = theMatch();
+  const squad = roster().filter(p => m.callups.includes(p.id));
+  const head = [
+    [db.club, team().name],
+    ["Partita", `${db.club} - ${m.opponent}`],
+    ["Data", new Date(m.date+"T12:00").toLocaleDateString("it-IT")],
+    ["Dove", m.venue === "home" ? "In casa" : "In trasferta"],
+    ["Campo", m.place || ""],
+    ["Formato", m.format], ["Modulo", m.formation],
+    ["Durata tempi", m.periods.join(" + ") + " min"],
+    [],
+    ["Numero","Cognome","Nome","1° tempo","2° tempo","3° tempo","Minuti","Gol","Assist"],
+  ];
+  squad.forEach(p => head.push([
+    p.num ? Number(p.num) : "", p.last, p.first,
+    ...[1,2,3].map(t => Object.values(m.lineups[t]).includes(p.id) ? "in campo" : "—"),
+    minutesOf(m, p.id), evCount(m,p.id,"g"), evCount(m,p.id,"a"),
+  ]));
+  head.push([], ["Gol totali", m.events.filter(e=>e.t==="g").length]);
+
+  const ev = [["Tempo","Tipo","Cognome","Nome"]];
+  m.events.forEach(e => {
+    const p = db.players.find(x=>x.id===e.pid);
+    if(p) ev.push([e.p, e.t === "g" ? "Gol" : "Assist", p.last, p.first]);
+  });
+
+  dlFile(`partita-${m.date}-${slug(m.opponent)}.xls`,
+    toXls([{name:"Tabellino", rows:head}, {name:"Eventi", rows:ev}]), XLSMIME);
+  toast("File scaricato");
+}
+
+/* --- tutto l'archivio, per la segreteria o come secondo backup --- */
+function exportAll(){
+  const r = roster();
+  const ss = db.sessions.filter(x => x.teamId === db.current).sort((a,b)=>a.date.localeCompare(b.date));
+  const ms = db.matches.filter(x => x.teamId === db.current).sort((a,b)=>a.date.localeCompare(b.date));
+
+  const rosa = [["Numero","Cognome","Nome","Certificato scade","Stato certificato"]];
+  r.forEach(p => rosa.push([p.num?Number(p.num):"", p.last, p.first, p.cert || "",
+    ({ok:"Valido", soon:"In scadenza", expired:"Scaduto", missing:"Mancante"})[certState(p)]]));
+
+  const pres = [["Cognome","Nome", ...ss.map(x => dShort(x.date)), "Allenamenti","Presenze","Frequenza %"]];
+  r.forEach(p => {
+    let tot=0, ok=0;
+    const cells = ss.map(x => {
+      const st = db.att[x.id]?.[p.id]?.s;
+      if(st){ tot++; if(st==="P") ok++; }
+      return st || "";
+    });
+    pres.push([p.last, p.first, ...cells, tot, ok, tot ? Math.round(ok/tot*100) : ""]);
+  });
+
+  const part = [["Data","Avversario","Dove","Formato","Convocati","Gol"]];
+  ms.forEach(m => { normMatch(m); part.push([
+    new Date(m.date+"T12:00").toLocaleDateString("it-IT"), m.opponent,
+    m.venue==="home"?"Casa":"Trasferta", m.format,
+    m.callups.length, m.events.filter(e=>e.t==="g").length]); });
+
+  const min = [["Cognome","Nome","Minuti totali","Gol","Assist","Partite giocate"]];
+  r.forEach(p => {
+    let mm=0, g=0, a=0, pl=0;
+    ms.forEach(m => { normMatch(m);
+      const t = minutesOf(m, p.id);
+      if(t>0) pl++;
+      mm += t; g += evCount(m,p.id,"g"); a += evCount(m,p.id,"a");
+    });
+    min.push([p.last, p.first, mm, g, a, pl]);
+  });
+
+  dlFile(`miracolifc-${slug(team().name)}-${today()}.xls`, toXls([
+    {name:"Rosa", rows:rosa}, {name:"Presenze", rows:pres},
+    {name:"Partite", rows:part}, {name:"Minutaggio", rows:min},
+  ]), XLSMIME);
+  toast("Archivio scaricato");
 }
 
 /* ============ SHEET ============ */
