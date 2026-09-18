@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+ <Worksheet ss:Name="Allenamento"><Table>
+  <Row><Cell><Data ss:Type="String">Miracoli FC</Data></Cell><Cell><Data ss:Type="String">Pulcini 2016 — Gruppo A</Data></Cell></Row>
+  <Row><Cell><Data ss:Type="String">Allenamento</Data></Cell><Cell><Data ss:Type="String">venerdì 18 settembre</Data></Cell></Row>
+  <Row><Cell><Data ss:Type="String">Campo</Data></Cell><Cell><Data ss:Type="String">Campo A</Data></Cell></Row>
+  <Row></Row>
+  <Row><Cell><Data ss:Type="String">Numero</Data></Cell><Cell><Data ss:Type="String">Cognome</Data></Cell><Cell><Data ss:Type="String">Nome</Data></Cell><Cell><Data ss:Type="String">Stato</Data></Cell><Cell><Data ss:Type="String">Nota</Data></Cell><Cell><Data ss:Type="String">Certificato</Data></Cell></Row>
+  <Row><Cell><Data ss:Type="Number">7</Data></Cell><Cell><Data ss:Type="String">Bianchi</Data></Cell><Cell><Data ss:Type="String">Leonardo</Data></Cell><Cell><Data ss:Type="String">Presente</Data></Cell><Cell><Data ss:Type="String"></Data></Cell><Cell><Data ss:Type="String">2027-04-26</Data></Cell></Row>
+  <Row><Cell><Data ss:Type="Number">11</Data></Cell><Cell><Data ss:Type="String">Caruso</Data></Cell><Cell><Data ss:Type="String">Mattia</Data></Cell><Cell><Data ss:Type="String">Presente</Data></Cell><Cell><Data ss:Type="String"></Data></Cell><Cell><Data ss:Type="String">2026-10-06</Data></Cell></Row>
+  <Row><Cell><Data ss:Type="Number">4</Data></Cell><Cell><Data ss:Type="String">D'Amico</Data></Cell><Cell><Data ss:Type="String">Riccardo</Data></Cell><Cell><Data ss:Type="String">Presente</Data></Cell><Cell><Data ss:Type="String"></Data></Cell><Cell><Data ss:Type="String">2027-03-27</Data></Cell></Row>
+  <Row><Cell><Data ss:Type="Number">9</Data></Cell><Cell><Data ss:Type="String">Esposito</Data></Cell><Cell><Data ss:Type="String">Gabriel</Data></Cell><Cell><Data ss:Type="String">Presente</Data></Cell><Cell><Data ss:Type="String"></Data></Cell><Cell><Data ss:Type="String">2027-06-05</Data></Cell></Row>
+  <Row><Cell><Data ss:Type="Number">2</Data></Cell><Cell><Data ss:Type="String">Ferrara</Data></Cell><Cell><Data ss:Type="String">Tommaso</Data></Cell><Cell><Data ss:Type="String">Presente</Data></Cell><Cell><Data ss:Type="String"></Data></Cell><Cell><Data ss:Type="String">2026-09-06</Data></Cell></Row>
+  <Row><Cell><Data ss:Type="Number">14</Data></Cell><Cell><Data ss:Type="String">Greco</Data></Cell><Cell><Data ss:Type="String">Edoardo</Data></Cell><Cell><Data ss:Type="String">Presente</Data></Cell><Cell><Data ss:Type="String"></Data></Cell><Cell><Data ss:Type="String">2027-07-15</Data></Cell></Row>
+  <Row><Cell><Data ss:Type="Number">6</Data></Cell><Cell><Data ss:Type="String">Longo</Data></Cell><Cell><Data ss:Type="String">Samuele</Data></Cell><Cell><Data ss:Type="String">Presente</Data></Cell><Cell><Data ss:Type="String"></Data></Cell><Cell><Data ss:Type="String">2027-02-10</Data></Cell></Row>
+  <Row><Cell><Data ss:Type="Number">10</Data></Cell><Cell><Data ss:Type="String">Marchetti</Data></Cell><Cell><Data ss:Type="String">Diego</Data></Cell><Cell><Data ss:Type="String">Presente</Data></Cell><Cell><Data ss:Type="String"></Data></Cell><Cell><Data ss:Type="String">2027-04-16</Data></Cell></Row>
+  <Row><Cell><Data ss:Type="Number">3</Data></Cell><Cell><Data ss:Type="String">Neri</Data></Cell><Cell><Data ss:Type="String">Christian</Data></Cell><Cell><Data ss:Type="String">Presente</Data></Cell><Cell><Data ss:Type="String"></Data></Cell><Cell><Data ss:Type="String">2027-03-12</Data></Cell></Row>
+  <Row><Cell><Data ss:Type="Number">8</Data></Cell><Cell><Data ss:Type="String">Orlando</Data></Cell><Cell><Data ss:Type="String">Filippo</Data></Cell><Cell><Data ss:Type="String">Presente</Data></Cell><Cell><Data ss:Type="String"></Data></Cell><Cell><Data ss:Type="String">2027-05-16</Data></Cell></Row>
+  <Row><Cell><Data ss:Type="Number">5</Data></Cell><Cell><Data ss:Type="String">Palumbo</Data></Cell><Cell><Data ss:Type="String">Andrea</Data></Cell><Cell><Data ss:Type="String">Presente</Data></Cell><Cell><Data ss:Type="String"></Data></Cell><Cell><Data ss:Type="String">2027-04-01</Data></Cell></Row>
+  <Row><Cell><Data ss:Type="Number">12</Data></Cell><Cell><Data ss:Type="String">Rizzo</Data></Cell><Cell><Data ss:Type="String">Alessandro</Data></Cell><Cell><Data ss:Type="String">Presente</Data></Cell><Cell><Data ss:Type="String"></Data></Cell><Cell><Data ss:Type="String">2027-01-26</Data></Cell></Row>
+  <Row><Cell><Data ss:Type="Number">1</Data></Cell><Cell><Data ss:Type="String">Santoro</Data></Cell><Cell><Data ss:Type="String">Matteo</Data></Cell><Cell><Data ss:Type="String">Presente</Data></Cell><Cell><Data ss:Type="String"></Data></Cell><Cell><Data ss:Type="String">2027-06-25</Data></Cell></Row>
+  <Row><Cell><Data ss:Type="Number">15</Data></Cell><Cell><Data ss:Type="String">Testa</Data></Cell><Cell><Data ss:Type="String">Nicolò</Data></Cell><Cell><Data ss:Type="String">Presente</Data></Cell><Cell><Data ss:Type="String"></Data></Cell><Cell><Data ss:Type="String">2026-09-27</Data></Cell></Row>
+  <Row><Cell><Data ss:Type="Number">13</Data></Cell><Cell><Data ss:Type="String">Valente</Data></Cell><Cell><Data ss:Type="String">Lorenzo</Data></Cell><Cell><Data ss:Type="String">Presente</Data></Cell><Cell><Data ss:Type="String"></Data></Cell><Cell><Data ss:Type="String">2027-02-25</Data></Cell></Row>
+  <Row><Cell><Data ss:Type="Number">16</Data></Cell><Cell><Data ss:Type="String">Zanetti</Data></Cell><Cell><Data ss:Type="String">Federico</Data></Cell><Cell><Data ss:Type="String">Presente</Data></Cell><Cell><Data ss:Type="String"></Data></Cell><Cell><Data ss:Type="String"></Data></Cell></Row>
+  <Row></Row>
+  <Row><Cell><Data ss:Type="String">Presenti</Data></Cell><Cell><Data ss:Type="Number">16</Data></Cell></Row>
+  <Row><Cell><Data ss:Type="String">Assenti</Data></Cell><Cell><Data ss:Type="Number">0</Data></Cell></Row>
+  <Row><Cell><Data ss:Type="String">Giustificati</Data></Cell><Cell><Data ss:Type="Number">0</Data></Cell></Row>
+  <Row><Cell><Data ss:Type="String">Infortunati</Data></Cell><Cell><Data ss:Type="Number">0</Data></Cell></Row>
+ </Table></Worksheet>
+</Workbook>

@@ -249,7 +249,7 @@ textarea{resize:vertical}
 
 const KEY = "miracolifc.v1";
 const BLANK = { club:"Miracoli FC", site:"Campo dei Miracoli", coach:"", phone:"", noteConv:"",
-                logo:null, teams:[], players:[],
+                logo:null, lastBackup:null, teams:[], players:[],
                 sessions:[], att:{}, matches:[], current:null };
 let db = load();
 let tab = "appello";
@@ -745,25 +745,72 @@ function shareMatch(id){
 }
 
 /* ============ REPORT ============ */
+let repMonth = today().slice(0,7);
+
+const inMonth = (iso, mk) => (iso || "").startsWith(mk);
+const monthLabel = mk => new Date(mk + "-15T12:00")
+  .toLocaleDateString("it-IT", {month:"long", year:"numeric"});
+
+/* Tutto quello che un ragazzo ha fatto nel mese: allenamenti, partite,
+   gol e assist con la frazione in cui sono arrivati. */
+function monthStats(pid, mk){
+  const ss = db.sessions.filter(s => s.teamId === db.current && inMonth(s.date, mk));
+  const c = {P:0, A:0, G:0, I:0};
+  ss.forEach(s => { const st = db.att[s.id]?.[pid]?.s; if(st) c[st]++; });
+  const registrati = c.P + c.A + c.G + c.I;
+
+  const ms = db.matches.filter(m => m.teamId === db.current && inMonth(m.date, mk));
+  let minuti = 0, partite = 0;
+  const gol = {}, ass = {};
+  ms.forEach(m => {
+    normMatch(m);
+    const t = minutesOf(m, pid);
+    if(t > 0){ partite++; minuti += t; }
+    SEGS.forEach(x => {
+      const g = evIn(m, pid, "g", x.k), a = evIn(m, pid, "a", x.k);
+      if(g) gol[x.k] = (gol[x.k] || 0) + g;
+      if(a) ass[x.k] = (ass[x.k] || 0) + a;
+    });
+  });
+  const somma = o => Object.values(o).reduce((x,y)=>x+y, 0);
+  return {
+    ...c, registrati, allenamenti: ss.length,
+    freq: registrati ? Math.round(c.P / registrati * 100) : null,
+    partite, minuti, gol, ass, golTot: somma(gol), assTot: somma(ass),
+  };
+}
+const detSeg = o => SEGS.filter(x => o[x.k]).map(x => `${o[x.k]} al ${x.sh}`).join(", ");
+
 function viewReport(){
   const r = roster();
   if(!r.length) return `<div class="card"><div class="empty"><b>Niente da mostrare</b>
     Aggiungi la rosa e fai qualche appello.</div></div>`;
 
-  const ss = db.sessions.filter(s => s.teamId === db.current).sort((a,b)=>b.date.localeCompare(a.date));
-  const stats = r.map(p => {
-    let tot=0, pres=0;
-    ss.forEach(s => { const st = db.att[s.id]?.[p.id]?.s; if(st){ tot++; if(st==="P") pres++; } });
-    return {p, tot, pres, pct: tot ? Math.round(pres/tot*100) : null};
-  }).sort((a,b)=> (b.pct ?? -1) - (a.pct ?? -1));
-
-  const bars = stats.map(({p,tot,pres,pct}) => `
-    <div class="barline">
-      <span class="nm">${E(p.last)} ${E(p.first)}</span>
-      <span class="track"><i class="${pct===null?"":pct>=75?"":pct>=50?"mid":"low"}"
-        style="width:${pct ?? 0}%"></i></span>
-      <span class="pct">${pct===null?"–":pct+"%"}</span>
-    </div>`).join("");
+  const cards = r.map(p => {
+    const st = monthStats(p.id, repMonth);
+    const cls = st.freq === null ? "mid" : st.freq >= 75 ? "hi" : st.freq >= 50 ? "mid" : "lo";
+    const assenze = st.A + st.G;
+    return `<div class="card">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="jersey">${p.num ?? "–"}</span>
+        <span class="nm" style="flex:1"><b style="font-size:15px">${E(p.last)} ${E(p.first)}</b></span>
+        <span class="freq ${cls}">${st.freq === null ? "–" : st.freq + "%"}</span>
+      </div>
+      <div style="margin-top:10px">
+        <div class="barline"><span class="nm">Allenamenti</span>
+          <span class="pct" style="width:auto">${st.P}/${st.registrati || 0} presenze</span></div>
+        ${assenze ? `<div class="barline"><span class="nm">Assenze</span>
+          <span class="pct" style="width:auto">${assenze}${st.G?` (${st.G} giustificate)`:""}${st.I?` · ${st.I} da infortunio`:""}</span></div>` : ""}
+        ${st.partite ? `<div class="barline"><span class="nm">Partite</span>
+          <span class="pct" style="width:auto">${st.partite} · ${st.minuti}′ giocati</span></div>` : ""}
+        ${st.golTot ? `<div class="barline"><span class="nm">Gol</span>
+          <span class="pct" style="width:auto;color:var(--ok)">${st.golTot} — ${detSeg(st.gol)}</span></div>` : ""}
+        ${st.assTot ? `<div class="barline"><span class="nm">Assist</span>
+          <span class="pct" style="width:auto">${st.assTot} — ${detSeg(st.ass)}</span></div>` : ""}
+        ${!st.registrati && !st.partite ? `<p class="muted">Nessuna attività registrata nel mese.</p>` : ""}
+      </div>
+    </div>`;
+  }).join("");
 
   const alerts = r.filter(p => certState(p) !== "ok");
   const alertRows = alerts.map(p => {
@@ -774,46 +821,99 @@ function viewReport(){
   }).join("");
 
   return `
+  ${backupBanner()}
+
   <div class="card">
-    <h2>Frequenza</h2>
-    <p class="muted">${ss.length} allenament${ss.length===1?"o":"i"} registrat${ss.length===1?"o":"i"}</p>
-    <div style="margin-top:10px">${bars}</div>
+    <h2>Report del mese</h2>
+    <label for="mm">Mese</label>
+    <input id="mm" type="month" value="${repMonth}" onchange="repMonth=this.value;render()">
+    <p class="muted" style="margin-top:8px;text-transform:capitalize">${monthLabel(repMonth)}</p>
+    <button class="btn primary" style="margin-top:11px" onclick="exportMonth()">
+      Scarica il report del mese (Excel)</button>
   </div>
+
+  ${cards}
 
   ${alerts.length ? `<div class="card">
     <h2>Certificati da sistemare</h2>
     <div style="margin-top:8px">${alertRows}</div></div>` : ""}
 
   <div class="card">
-    <h2>Per la segreteria</h2>
-    <p class="muted">Rosa, presenze, partite e minutaggio in un unico file a più fogli.</p>
-    <button class="btn primary" style="margin-top:11px" onclick="exportAll()">Scarica tutto (Excel)</button>
-    <button class="btn ghost" style="margin-top:9px" onclick="exportCsv()">Solo le presenze (CSV)</button>
+    <h2>Archivio completo</h2>
+    <p class="muted">Rosa, presenze, partite e minutaggio di tutta la stagione.</p>
+    <button class="btn ghost" style="margin-top:11px" onclick="exportAll()">Scarica tutto (Excel)</button>
   </div>`;
 }
 
-function exportCsv(){
-  const r = roster();
-  const ss = db.sessions.filter(s=>s.teamId===db.current).sort((a,b)=>a.date.localeCompare(b.date));
-  const head = ["Cognome","Nome","Numero","Certificato", ...ss.map(s=>dShort(s.date)),
-                "Allenamenti","Presenze","Frequenza %"];
-  const lines = [head.join(";")];
+/* --- promemoria backup: i dati stanno solo qui, e si perdono --- */
+function backupBanner(){
+  const last = db.lastBackup || null;
+  const giorni = last ? Math.floor((Date.now() - last) / 86400000) : null;
+  const urgente = giorni === null || giorni >= 30;
+  if(!urgente){
+    return `<div class="card" style="border-left:4px solid var(--ok)">
+      <p class="muted">Ultimo backup ${giorni === 0 ? "oggi" : giorni === 1 ? "ieri" : giorni + " giorni fa"}.
+      <button class="btn ghost sm" style="width:100%;margin-top:9px" onclick="backup()">Farne un altro</button></p>
+    </div>`;
+  }
+  return `<div class="card" style="border-left:4px solid var(--warn);background:#FFFBEB">
+    <h2 style="color:#92400E">${last ? "È ora di un backup" : "Non hai mai fatto un backup"}</h2>
+    <p class="muted" style="color:#92400E">
+      ${last ? `L'ultimo risale a ${giorni} giorni fa.` : "I dati stanno solo in questo telefono."}
+      Se svuoti la cronologia del browser o cambi dispositivo, rosa, presenze e partite spariscono.
+      Il file che scarichi puoi mandartelo su WhatsApp o per email.</p>
+    <button class="btn primary" style="margin-top:11px" onclick="backup()">Scarica un backup adesso</button>
+  </div>`;
+}
+
+/* --- esportazione del mese --- */
+function exportMonth(){
+  const r = roster(), mk = repMonth;
+  const ss = db.sessions.filter(s => s.teamId === db.current && inMonth(s.date, mk))
+                        .sort((a,b)=>a.date.localeCompare(b.date));
+  const ms = db.matches.filter(m => m.teamId === db.current && inMonth(m.date, mk))
+                       .sort((a,b)=>a.date.localeCompare(b.date));
+
+  const rie = [
+    [db.club, team().name],
+    ["Report mensile", monthLabel(mk)],
+    ["Allenamenti nel mese", ss.length],
+    ["Partite nel mese", ms.length],
+    [],
+    ["Numero","Cognome","Nome","Allenamenti","Presenze","Assenze","Giustificate","Infortuni",
+     "Frequenza %","Partite","Minuti","Gol","Dettaglio gol","Assist","Dettaglio assist"],
+  ];
   r.forEach(p => {
-    let tot=0, pres=0;
-    const cells = ss.map(s => {
-      const st = db.att[s.id]?.[p.id]?.s;
-      if(st){ tot++; if(st==="P") pres++; }
-      return st || "";
-    });
-    lines.push([p.last, p.first, p.num??"", p.cert??"", ...cells,
-                tot, pres, tot?Math.round(pres/tot*100):""].join(";"));
+    const st = monthStats(p.id, mk);
+    rie.push([p.num ? Number(p.num) : "", p.last, p.first,
+      st.registrati, st.P, st.A, st.G, st.I, st.freq ?? "",
+      st.partite, st.minuti, st.golTot, detSeg(st.gol), st.assTot, detSeg(st.ass)]);
   });
-  const blob = new Blob(["\uFEFF" + lines.join("\n")], {type:"text/csv;charset=utf-8"});
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = `presenze-${team().name.replace(/\s+/g,"-")}-${today()}.csv`;
-  a.click();
-  setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
+
+  const pres = [["Cognome","Nome", ...ss.map(x => dShort(x.date))]];
+  r.forEach(p => pres.push([p.last, p.first,
+    ...ss.map(x => LAB[db.att[x.id]?.[p.id]?.s] || "")]));
+
+  const eventi = [["Data","Avversario","Segmento","Tempo","Tipo","Cognome","Nome"]];
+  ms.forEach(m => {
+    normMatch(m);
+    m.events.forEach(e => {
+      const p = db.players.find(x=>x.id===e.pid), si = segInfo(e.seg);
+      if(p && si) eventi.push([new Date(m.date+"T12:00").toLocaleDateString("it-IT"),
+        m.opponent, si.sh, si.per, e.t==="g"?"Gol":"Assist", p.last, p.first]);
+    });
+  });
+
+  const gare = [["Data","Avversario","Tempi vinti","V-P-S","Gol fatti","Gol subiti","Punti"]];
+  ms.forEach(m => { const sc = scoreOf(normMatch(m));
+    gare.push([new Date(m.date+"T12:00").toLocaleDateString("it-IT"), m.opponent,
+      sc.w, `${sc.w}-${sc.d}-${sc.l}`, sc.gf, sc.ga, sc.punti]); });
+
+  dlFile(`report-${mk}-${slug(team().name)}.xls`, toXls([
+    {name:"Riepilogo", rows:rie}, {name:"Presenze", rows:pres},
+    {name:"Gol e assist", rows:eventi}, {name:"Gare", rows:gare},
+  ]), XLSMIME);
+  toast("Report del mese scaricato");
 }
 
 /* ============ CONDIVISIONE ============ */
@@ -869,6 +969,7 @@ function backup(){
   a.href = URL.createObjectURL(blob);
   a.download = `miracolifc-backup-${today()}.json`;
   a.click();
+  db.lastBackup = Date.now(); save();
   setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
 }
 function restore(input){
@@ -918,19 +1019,38 @@ function demo(){
     date:d(3), meet:"09:15", kick:"10:30", place:"Centro Sportivo Casalotti",
     address:"Via di Casalotti 259, Roma", kit:"Bordeaux, prima divisa + calzettoni celesti",
     notes:"Portate borraccia e parastinchi. Si parte insieme dal Campo dei Miracoli.",
-    callups: db.players.filter(p=>p.teamId===t.id && !["Ferrara","Zanetti"].includes(p.last)).map(p=>p.id)});
+    callups: db.players.filter(p=>p.teamId===t.id && !["Ferrara","Zanetti"].includes(p.last)).map(p=>p.id),
+    format:"7v7", formation:"1-2-3-1",
+    segMin:{T1:15,T2:15,T3A:10,T3B:10}, lineups:{T1:{},T2:{},T3A:{},T3B:{}},
+    subs:[], events:[], opp:{T1:0,T2:0,T3A:0,T3B:0}});
 
   save(); render(); toast("Dati di esempio caricati");
 }
 
 
 /* ============ MATCHDAY ============ */
+/* Il regolamento conta TRE tempi, ma il terzo si gioca in due frazioni
+   separate dall'intervallo tecnico. I minuti si misurano sui quattro
+   segmenti, i punti sui tre tempi: tenerli distinti evita di assegnare
+   punti anche al 3A e al 3B. */
+
+const SEGS = [
+  {k:"T1",  lab:"1° tempo",           sh:"1°",  def:15, per:"T1"},
+  {k:"T2",  lab:"2° tempo",           sh:"2°",  def:15, per:"T2"},
+  {k:"T3A", lab:"3° tempo — parte A", sh:"3°A", def:10, per:"T3"},
+  {k:"T3B", lab:"3° tempo — parte B", sh:"3°B", def:10, per:"T3", brk:true},
+];
+const SEGKEYS = SEGS.map(s => s.k);
+const PERS = [{k:"T1",lab:"1° tempo"},{k:"T2",lab:"2° tempo"},{k:"T3",lab:"3° tempo"}];
+const segsOf = per => SEGS.filter(s => s.per === per).map(s => s.k);
+const segInfo = k => SEGS.find(s => s.k === k);
+
 const FORMS = {
   "7v7":["1-2-3-1","1-3-2-1","1-2-2-2","1-3-1-2"],
   "8v8":["1-3-3-1","1-3-2-2","1-2-3-2","1-4-2-1"],
   "9v9":["1-3-3-2","1-4-3-1","1-3-4-1","1-4-2-2"]
 };
-let curMatch = null, period = 1, picked = null;
+let curMatch = null, seg = "T1", picked = null;
 
 function slotsOf(name){
   const lines = name.split("-").slice(1).map(Number);
@@ -943,33 +1063,96 @@ function slotsOf(name){
   });
   return out;
 }
+
 function normMatch(m){
   if(!m.format) m.format = "7v7";
-  if(!m.periods) m.periods = [20,20,20];
   if(!m.formation || !FORMS[m.format].includes(m.formation)) m.formation = FORMS[m.format][0];
-  if(!m.lineups) m.lineups = {1:{},2:{},3:{}};
-  [1,2,3].forEach(p => { if(!m.lineups[p]) m.lineups[p] = {}; });
+
+  /* migrazione dal vecchio modello a 3 tempi */
+  if(m.lineups && m.lineups["1"] && !m.lineups.T1){
+    m.lineups = {T1:m.lineups["1"]||{}, T2:m.lineups["2"]||{}, T3A:m.lineups["3"]||{}, T3B:{}};
+  }
+  if(!m.lineups) m.lineups = {};
+  SEGKEYS.forEach(k => { if(!m.lineups[k]) m.lineups[k] = {}; });
+
+  if(!m.segMin){
+    m.segMin = {};
+    SEGS.forEach((s,i) => m.segMin[s.k] = (m.periods && m.periods[i]) || s.def);
+    if(m.periods){ m.segMin.T3A = Math.round((m.periods[2]||20)/2); m.segMin.T3B = m.segMin.T3A; }
+  }
+  SEGS.forEach(s => { if(!m.segMin[s.k]) m.segMin[s.k] = s.def; });
+
+  if(!m.opp) m.opp = {};
+  SEGKEYS.forEach(k => { if(typeof m.opp[k] !== "number") m.opp[k] = 0; });
+
+  if(!m.subs) m.subs = [];
   if(!m.events) m.events = [];
+  m.events.forEach(e => { if(!e.seg) e.seg = e.p === 2 ? "T2" : e.p === 3 ? "T3A" : "T1"; });
   if(!m.callups) m.callups = [];
   return m;
 }
 const theMatch = () => normMatch(db.matches.find(m => m.id === curMatch));
-function openMatch(id){ curMatch = id; period = 1; picked = null; tab = "match"; render(); window.scrollTo(0,0); }
+function openMatch(id){ curMatch = id; seg = "T1"; picked = null; tab = "match"; render(); window.scrollTo(0,0); }
 
-function minutesOf(m, pid){
-  return [1,2,3].reduce((sum,p) =>
-    Object.values(m.lineups[p]).includes(pid) ? sum + (+m.periods[p-1]||0) : sum, 0);
+/* --- formazione in campo, cambi applicati --- */
+function currentLineup(m, k){
+  const line = Object.assign({}, m.lineups[k]);
+  m.subs.filter(s => s.seg === k).sort((a,b)=>a.min-b.min).forEach(s => {
+    const slot = Object.keys(line).find(x => line[x] === s.out);
+    if(slot) line[slot] = s.in;
+  });
+  return line;
 }
-const periodsOf = (m,pid) => [1,2,3].filter(p => Object.values(m.lineups[p]).includes(pid)).length;
-const evCount = (m,pid,t) => m.events.filter(e => e.pid===pid && e.t===t).length;
 
+/* --- minuti effettivi, cambi in corsa compresi --- */
+function minutesIn(m, k, pid){
+  const dur = +m.segMin[k] || 0;
+  const started = Object.values(m.lineups[k]).includes(pid);
+  const subs = m.subs.filter(s => s.seg === k && (s.in === pid || s.out === pid))
+                     .sort((a,b)=>a.min-b.min);
+  if(!started && !subs.length) return 0;
+  let tot = 0, since = started ? 0 : null;
+  subs.forEach(s => {
+    const mm = Math.max(0, Math.min(dur, +s.min || 0));
+    if(s.in === pid && since === null) since = mm;
+    else if(s.out === pid && since !== null){ tot += mm - since; since = null; }
+  });
+  if(since !== null) tot += dur - since;
+  return Math.max(0, tot);
+}
+const minutesOf = (m,pid) => SEGKEYS.reduce((n,k) => n + minutesIn(m,k,pid), 0);
+const segsPlayed = (m,pid) => SEGKEYS.filter(k => minutesIn(m,k,pid) > 0).length;
+const evCount = (m,pid,t) => m.events.filter(e => e.pid===pid && e.t===t).length;
+const evIn = (m,pid,t,k) => m.events.filter(e => e.pid===pid && e.t===t && e.seg===k).length;
+const golIn = (m,k) => m.events.filter(e => e.t==="g" && e.seg===k).length;
+
+/* --- punteggio federale: ogni tempo vale a sé --- */
+function scoreOf(m){
+  const periods = PERS.map(pe => {
+    const ks = segsOf(pe.k);
+    const gf = ks.reduce((n,k)=>n+golIn(m,k),0);
+    const ga = ks.reduce((n,k)=>n+(+m.opp[k]||0),0);
+    return {...pe, gf, ga, diff:gf-ga, res: gf>ga ? "V" : gf<ga ? "S" : "P"};
+  });
+  const w = periods.filter(p=>p.res==="V").length;
+  const l = periods.filter(p=>p.res==="S").length;
+  const d = periods.filter(p=>p.res==="P").length;
+  const gf = periods.reduce((n,p)=>n+p.gf,0), ga = periods.reduce((n,p)=>n+p.ga,0);
+  return {periods, w, l, d, gf, ga, diff:gf-ga, punti:w,
+          esito: w>l ? "V" : w<l ? "S" : "P"};
+}
+
+/* --- vista --- */
 function viewMatch(){
   const m = theMatch();
-  if(!m) { tab = "gare"; return viewGare(); }
+  if(!m){ tab = "gare"; return viewGare(); }
+  const info = segInfo(seg);
   const slots = slotsOf(m.formation);
-  const line = m.lineups[period];
+  const line = currentLineup(m, seg);
   const squad = roster().filter(p => m.callups.includes(p.id));
   const inField = new Set(Object.values(line).filter(Boolean));
+  const sc = scoreOf(m);
+  const subsHere = m.subs.filter(x => x.seg === seg).sort((a,b)=>a.min-b.min);
 
   const bubbles = slots.map(s => {
     const pid = line[s.id];
@@ -980,20 +1163,22 @@ function viewMatch(){
       ${p ? `<span class="lb">${E(p.last)}</span>` : ""}</button>`;
   }).join("");
 
-  const rows = squad.map(p => `
-    <div class="plrow ${inField.has(p.id)?"on":""}">
+  const rows = squad.map(p => {
+    const mi = minutesIn(m, seg, p.id);
+    return `<div class="plrow ${inField.has(p.id)?"on":""}">
       <span class="jersey">${p.num ?? "–"}</span>
       <span class="nm"><b>${E(p.last)} ${E(p.first)}</b>
-        <span>${minutesOf(m,p.id)}′ · ${periodsOf(m,p.id)}/3 tempi</span></span>
+        <span>${minutesOf(m,p.id)}′ totali · ${mi}′ in questo segmento</span></span>
       <span class="cnt">
-        ${evCount(m,p.id,"g") ? `<button class="sub" onclick="delEv('${p.id}','g')">−</button>` : ""}
-        <button class="add" onclick="addEv('${p.id}','g')">+G${evCount(m,p.id,"g")?" "+evCount(m,p.id,"g"):""}</button>
+        ${evIn(m,p.id,"g",seg) ? `<button class="sub" onclick="delEv('${p.id}','g')">−</button>` : ""}
+        <button class="add" onclick="addEv('${p.id}','g')">+G${evIn(m,p.id,"g",seg)?" "+evIn(m,p.id,"g",seg):""}</button>
       </span>
       <span class="cnt">
-        ${evCount(m,p.id,"a") ? `<button class="sub" onclick="delEv('${p.id}','a')">−</button>` : ""}
-        <button class="add alt" onclick="addEv('${p.id}','a')">+A${evCount(m,p.id,"a")?" "+evCount(m,p.id,"a"):""}</button>
+        ${evIn(m,p.id,"a",seg) ? `<button class="sub" onclick="delEv('${p.id}','a')">−</button>` : ""}
+        <button class="add alt" onclick="addEv('${p.id}','a')">+A${evIn(m,p.id,"a",seg)?" "+evIn(m,p.id,"a",seg):""}</button>
       </span>
-    </div>`).join("");
+    </div>`;
+  }).join("");
 
   const maxMin = Math.max(1, ...squad.map(p => minutesOf(m,p.id)));
   const mins = [...squad].sort((a,b)=>minutesOf(m,a.id)-minutesOf(m,b.id)).map(p => {
@@ -1004,11 +1189,13 @@ function viewMatch(){
   }).join("");
 
   const unused = squad.filter(p => minutesOf(m,p.id)===0);
-  const scorers = squad.filter(p=>evCount(m,p.id,"g")>0)
-    .map(p=>`${p.last}${evCount(m,p.id,"g")>1?" ("+evCount(m,p.id,"g")+")":""}`).join(", ");
-  const assist = squad.filter(p=>evCount(m,p.id,"a")>0)
-    .map(p=>`${p.last}${evCount(m,p.id,"a")>1?" ("+evCount(m,p.id,"a")+")":""}`).join(", ");
-  const gol = m.events.filter(e=>e.t==="g").length;
+  const tabellino = squad.filter(p => evCount(m,p.id,"g") || evCount(m,p.id,"a")).map(p => {
+    const det = t => SEGS.filter(s=>evIn(m,p.id,t,s.k)).map(s=>`${evIn(m,p.id,t,s.k)} al ${s.sh}`).join(", ");
+    const g = evCount(m,p.id,"g"), a = evCount(m,p.id,"a");
+    return `<p class="muted" style="color:var(--ink);margin:3px 0">
+      <b>${E(p.last)} ${E(p.first)}</b> —
+      ${g?`${g} gol (${det("g")})`:""}${g&&a?" · ":""}${a?`${a} assist (${det("a")})`:""}</p>`;
+  }).join("");
 
   return `
   <button class="backlink" onclick="go('gare')">← Tutte le gare</button>
@@ -1026,24 +1213,58 @@ function viewMatch(){
           ${FORMS[m.format].map(f=>`<option ${m.formation===f?"selected":""}>${f}</option>`).join("")}
         </select></div>
     </div>
-    <label>Durata dei tre tempi (minuti)</label>
-    <div style="display:flex;gap:8px">
-      ${[0,1,2].map(i=>`<input class="mini-in" type="number" min="1" max="45" value="${m.periods[i]}"
-         onchange="setMin(${i}, this.value)">`).join("")}
-      <span class="muted" style="align-self:center">totale ${m.periods.reduce((a,b)=>a+ +b,0)}′</span>
+    <label>Durata dei segmenti (minuti)</label>
+    <div style="display:flex;gap:7px;flex-wrap:wrap">
+      ${SEGS.map(x=>`<div style="text-align:center">
+        <input class="mini-in" type="number" min="1" max="45" value="${m.segMin[x.k]}"
+          onchange="setSegMin('${x.k}', this.value)">
+        <div style="font-size:10.5px;color:var(--soft);margin-top:2px">${x.sh}</div></div>`).join("")}
+      <span class="muted" style="align-self:flex-start;padding-top:12px">
+        totale ${SEGKEYS.reduce((n,k)=>n+ +m.segMin[k],0)}′</span>
     </div>
-    ${m.callups.length ? "" : `<p class="muted" style="margin-top:11px;color:var(--no)">
-       Nessun convocato: selezionali prima di schierare la squadra.</p>`}
     <button class="btn accent sm" style="width:100%;margin-top:11px" onclick="openConv()">
       Crea la convocazione (${m.callups.length})</button>
     <button class="btn ghost sm" style="width:100%;margin-top:9px" onclick="pickCallups('${m.id}')">
       Modifica i convocati</button>
   </div>
 
-  <div class="mdbar">
-    ${[1,2,3].map(p=>`<button aria-pressed="${period===p}" onclick="setPeriod(${p})">
-      ${p}° tempo<small>${m.periods[p-1]}′</small></button>`).join("")}
+  <!-- punteggio federale -->
+  <div class="card" style="border-left:4px solid ${sc.esito==="V"?"var(--ok)":sc.esito==="S"?"var(--no)":"var(--warn)"}">
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px">
+      <div>
+        <p class="muted">Risultato a tempi</p>
+        <div class="num" style="font-size:36px;font-weight:800;color:var(--bord);line-height:1">
+          ${sc.w}<span style="color:var(--soft)">-</span>${sc.l}</div>
+        <p class="muted" style="margin-top:3px">${sc.w} vinti · ${sc.d} pari · ${sc.l} persi</p>
+      </div>
+      <div style="text-align:right">
+        <p class="muted">Gol complessivi</p>
+        <div class="num" style="font-size:26px;font-weight:800">${sc.gf}-${sc.ga}</div>
+        <p class="muted">differenza ${sc.diff>0?"+":""}${sc.diff}</p>
+      </div>
+    </div>
+    <div style="margin-top:12px">
+      ${sc.periods.map(pe=>`<div class="barline">
+        <span class="nm">${pe.lab}</span>
+        <span class="freq ${pe.res==="V"?"hi":pe.res==="P"?"mid":"lo"}">${pe.res}</span>
+        <span class="pct">${pe.gf}-${pe.ga}</span>
+        <span class="pct" style="color:var(--soft)">${pe.diff>0?"+":""}${pe.diff}</span>
+      </div>`).join("")}
+    </div>
   </div>
+
+  <!-- segmenti -->
+  <div class="mdbar">
+    ${SEGS.map(x=>`<button aria-pressed="${seg===x.k}" onclick="setSeg('${x.k}')">
+      ${x.sh}<small>${m.segMin[x.k]}′</small></button>`).join("")}
+  </div>
+
+  ${info.brk ? `<p class="muted" style="background:#FEF3C7;color:#92400E;padding:10px 12px;
+     border-radius:11px;margin-bottom:11px">
+     <b>Intervallo tecnico al 10′.</b> Qui la rotazione è obbligatoria: devono entrare
+     i ragazzi che hanno giocato meno.
+     <button class="btn ghost sm" style="width:100%;margin-top:8px" onclick="rotate()">
+       Schiera chi ha giocato meno</button></p>` : ""}
 
   <div class="pitch">
     <svg viewBox="0 0 100 133" preserveAspectRatio="none">
@@ -1060,19 +1281,39 @@ function viewMatch(){
 
   <div class="counts">
     <span><b>${inField.size}</b>/${slots.length} in campo</span>
-    <span><b>${gol}</b> gol</span>
-    <span>${period}° tempo</span>
+    <span><b>${golIn(m,seg)}</b> gol nostri</span>
+    <span><b>${m.opp[seg]}</b> subiti</span>
   </div>
+
+  <div class="card">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span class="nm" style="flex:1">Gol subiti nel ${info.lab.toLowerCase()}</span>
+      <button class="sub" onclick="oppGoal(-1)" ${m.opp[seg]?"":"disabled"}>−</button>
+      <span class="num" style="font-size:22px;font-weight:800;min-width:28px;text-align:center">${m.opp[seg]}</span>
+      <button class="add" onclick="oppGoal(1)">+</button>
+    </div>
+  </div>
+
   <div class="row2" style="margin-bottom:12px">
-    ${period>1 ? `<button class="btn ghost sm" style="width:auto" onclick="copyPrev()">Copia dal ${period-1}° tempo</button>` : `<span></span>`}
-    <button class="btn ghost sm" style="width:auto" onclick="clearPeriod()">Svuota il tempo</button>
+    <button class="btn ghost sm" style="width:auto" onclick="newSub()">Registra un cambio</button>
+    ${seg!=="T1" ? `<button class="btn ghost sm" style="width:auto" onclick="copyPrev()">Copia il segmento prima</button>` : `<button class="btn ghost sm" style="width:auto" onclick="clearSeg()">Svuota</button>`}
   </div>
+
+  ${subsHere.length ? `<div class="card"><h2>Cambi nel ${info.sh}</h2>
+    ${subsHere.map(x=>{
+      const pin = db.players.find(p=>p.id===x.in), pout = db.players.find(p=>p.id===x.out);
+      return `<div class="barline">
+        <span class="nm">${x.min}′ — entra ${E(pin?pin.last:"?")}, esce ${E(pout?pout.last:"?")}</span>
+        <button class="sub" onclick="delSub('${x.id}')">×</button></div>`;
+    }).join("")}</div>` : ""}
+
   ${picked ? `<p class="muted" style="background:rgba(91,192,235,.15);padding:9px 12px;border-radius:10px;color:#0E5A7D">
      ${E(db.players.find(p=>p.id===picked).last)} selezionato — tocca una posizione sul campo.</p>` : ""}
 
   <div class="card">
     <h2>Convocati</h2>
-    <p class="muted">Tocca il nome per selezionarlo, poi lo slot in campo.</p>
+    <p class="muted">Gol e assist finiscono nel ${info.lab.toLowerCase()}. Anche chi è appena
+      entrato può segnare: conta il segmento, non chi era titolare.</p>
     <div style="margin-top:9px">${rows || `<p class="muted">Nessun convocato.</p>`}</div>
   </div>
 
@@ -1080,32 +1321,43 @@ function viewMatch(){
     <h2>Riepilogo</h2>
     ${unused.length ? `<p class="muted" style="background:#FEF3C7;color:#92400E;padding:9px 12px;border-radius:10px;margin:8px 0">
        Non sono ancora entrati: ${unused.map(p=>E(p.last)).join(", ")}</p>` : ""}
-    ${scorers ? `<p class="muted" style="color:var(--ink)"><b>Gol:</b> ${E(scorers)}</p>` : ""}
-    ${assist ? `<p class="muted" style="color:var(--ink)"><b>Assist:</b> ${E(assist)}</p>` : ""}
-    <div style="margin-top:12px">${mins}</div>
+    ${tabellino || `<p class="muted">Nessun gol registrato.</p>`}
+    <h3 class="muted" style="margin:14px 0 6px">Minutaggio</h3>
+    ${mins}
     <button class="btn wa" style="margin-top:14px" onclick="shareTabellino()">Invia il tabellino su WhatsApp</button>
     <button class="btn ghost" style="margin-top:9px" onclick="exportMatch()">Scarica la partita (Excel)</button>
   </div>`;
 }
 
-function setPeriod(p){ period = p; picked = null; render(); }
+/* --- azioni --- */
+function setSeg(k){ seg = k; picked = null; render(); }
 function setFormat(f){
   const m = theMatch();
-  m.format = f; m.formation = FORMS[f][0]; m.lineups = {1:{},2:{},3:{}};
+  m.format = f; m.formation = FORMS[f][0];
+  SEGKEYS.forEach(k => m.lineups[k] = {});
+  m.subs = [];
   save(); render();
 }
 function setFormation(f){
   const m = theMatch();
-  m.formation = f; m.lineups = {1:{},2:{},3:{}};
+  m.formation = f;
+  SEGKEYS.forEach(k => m.lineups[k] = {});
+  m.subs = [];
   save(); render();
 }
-function setMin(i, v){
+function setSegMin(k, v){
+  theMatch().segMin[k] = Math.max(1, Math.min(45, +v || 1));
+  save(); render();
+}
+function oppGoal(d){
   const m = theMatch();
-  m.periods[i] = Math.max(1, Math.min(45, +v || 1));
+  m.opp[seg] = Math.max(0, (+m.opp[seg] || 0) + d);
   save(); render();
 }
 function tapSlot(sid){
-  const m = theMatch(), line = m.lineups[period];
+  const m = theMatch(), line = m.lineups[seg];
+  if(m.subs.some(x => x.seg === seg))
+    return toast("In questo segmento ci sono cambi: usa «Registra un cambio»");
   if(picked){
     Object.keys(line).forEach(k => { if(line[k] === picked) line[k] = null; });
     line[sid] = picked; picked = null;
@@ -1115,42 +1367,97 @@ function tapSlot(sid){
   const free = roster().filter(p => m.callups.includes(p.id) && !Object.values(line).includes(p.id));
   if(!free.length) return toast("Tutti i convocati sono già in campo");
   sheet(`<h3>Chi va in questa posizione?</h3>
-    <div class="chiplist">${free.map(p=>`<button class="chip"
-      onclick="assignSlot('${sid}','${p.id}')">${p.num ?? "–"} ${E(p.last)}</button>`).join("")}</div>`);
+    <p class="muted">Ordinati per minuti giocati: in cima chi ne ha di meno.</p>
+    <div class="chiplist">${free.sort((a,b)=>minutesOf(m,a.id)-minutesOf(m,b.id))
+      .map(p=>`<button class="chip" onclick="assignSlot('${sid}','${p.id}')">
+        ${p.num ?? "–"} ${E(p.last)} · ${minutesOf(m,p.id)}′</button>`).join("")}</div>`);
 }
 function assignSlot(sid, pid){
-  const line = theMatch().lineups[period];
+  const line = theMatch().lineups[seg];
   Object.keys(line).forEach(k => { if(line[k] === pid) line[k] = null; });
   line[sid] = pid;
   save(); closeSheet(); render();
 }
 function copyPrev(){
   const m = theMatch();
-  m.lineups[period] = Object.assign({}, m.lineups[period-1]);
+  const i = SEGKEYS.indexOf(seg);
+  if(i < 1) return;
+  m.lineups[seg] = Object.assign({}, currentLineup(m, SEGKEYS[i-1]));
+  m.subs = m.subs.filter(x => x.seg !== seg);
   save(); render();
 }
-function clearPeriod(){ theMatch().lineups[period] = {}; save(); render(); }
+function clearSeg(){
+  const m = theMatch();
+  m.lineups[seg] = {};
+  m.subs = m.subs.filter(x => x.seg !== seg);
+  save(); render();
+}
+/* Schiera automaticamente chi ha giocato meno: è quello che chiede il
+   regolamento dopo l'intervallo tecnico. */
+function rotate(){
+  const m = theMatch(), slots = slotsOf(m.formation);
+  const ordered = roster().filter(p => m.callups.includes(p.id))
+    .sort((a,b) => minutesOf(m,a.id) - minutesOf(m,b.id));
+  const line = {};
+  slots.forEach((s,i) => { if(ordered[i]) line[s.id] = ordered[i].id; });
+  m.lineups[seg] = line;
+  m.subs = m.subs.filter(x => x.seg !== seg);
+  save(); render();
+  toast("Schierati gli " + slots.length + " con meno minuti");
+}
+function newSub(){
+  const m = theMatch(), line = currentLineup(m, seg);
+  const onField = Object.values(line).filter(Boolean)
+    .map(id => db.players.find(p=>p.id===id)).filter(Boolean);
+  const bench = roster().filter(p => m.callups.includes(p.id) && !Object.values(line).includes(p.id));
+  if(!onField.length) return toast("Schiera prima la formazione del segmento");
+  if(!bench.length) return toast("Nessuno in panchina");
+  sheet(`<h3>Cambio nel ${segInfo(seg).lab}</h3>
+    <label for="sbo">Esce</label>
+    <select id="sbo">${onField.map(p=>`<option value="${p.id}">${p.num ?? "–"} ${E(p.last)} ${E(p.first)}</option>`).join("")}</select>
+    <label for="sbi">Entra</label>
+    <select id="sbi">${bench.sort((a,b)=>minutesOf(m,a.id)-minutesOf(m,b.id))
+      .map(p=>`<option value="${p.id}">${p.num ?? "–"} ${E(p.last)} ${E(p.first)} · ${minutesOf(m,p.id)}′</option>`).join("")}</select>
+    <label for="sbm">Minuto del segmento (0 – ${m.segMin[seg]})</label>
+    <input id="sbm" type="number" min="0" max="${m.segMin[seg]}" value="${Math.round(m.segMin[seg]/2)}">
+    <button class="btn primary" style="margin-top:14px" onclick="saveSub()">Registra il cambio</button>`);
+}
+function saveSub(){
+  const m = theMatch();
+  const out = document.getElementById("sbo").value, inn = document.getElementById("sbi").value;
+  const min = Math.max(0, Math.min(+m.segMin[seg], +document.getElementById("sbm").value || 0));
+  if(out === inn) return toast("Sono lo stesso giocatore");
+  m.subs.push({id:uid(), seg, min, in:inn, out});
+  save(); closeSheet(); render();
+}
+function delSub(id){
+  const m = theMatch();
+  m.subs = m.subs.filter(x => x.id !== id);
+  save(); render();
+}
 function addEv(pid, t){
-  theMatch().events.push({id:uid(), pid, t, p:period});
+  theMatch().events.push({id:uid(), pid, t, seg});
   save(); if(navigator.vibrate) navigator.vibrate(12); render();
 }
 function delEv(pid, t){
   const m = theMatch();
   for(let i=m.events.length-1;i>=0;i--){
-    if(m.events[i].pid===pid && m.events[i].t===t){ m.events.splice(i,1); break; }
+    if(m.events[i].pid===pid && m.events[i].t===t && m.events[i].seg===seg){ m.events.splice(i,1); break; }
   }
   save(); render();
 }
 function shareTabellino(){
-  const m = theMatch(), squad = roster().filter(p=>m.callups.includes(p.id));
-  const gol = m.events.filter(e=>e.t==="g").length;
+  const m = theMatch(), squad = roster().filter(p=>m.callups.includes(p.id)), sc = scoreOf(m);
   let t = `⚽ ${db.club} — ${m.opponent}\n${dLong(m.date)} · ${m.format}\n\n`;
-  t += `Gol fatti: ${gol}\n`;
-  const sc = squad.filter(p=>evCount(m,p.id,"g")>0)
-    .map(p=>`• ${p.last} ${p.first}${evCount(m,p.id,"g")>1?" ("+evCount(m,p.id,"g")+")":""}`).join("\n");
+  t += `Risultato a tempi: ${sc.w}-${sc.l}  (${sc.w}V ${sc.d}P ${sc.l}S)\n`;
+  t += `Gol complessivi: ${sc.gf}-${sc.ga}\n`;
+  sc.periods.forEach(pe => t += `  ${pe.lab}: ${pe.gf}-${pe.ga}\n`);
+  const det = (p,ty) => SEGS.filter(s=>evIn(m,p.id,ty,s.k)).map(s=>`${evIn(m,p.id,ty,s.k)} al ${s.sh}`).join(", ");
+  const sc2 = squad.filter(p=>evCount(m,p.id,"g")>0)
+    .map(p=>`• ${p.last} ${p.first}: ${evCount(m,p.id,"g")} (${det(p,"g")})`).join("\n");
   const as = squad.filter(p=>evCount(m,p.id,"a")>0)
-    .map(p=>`• ${p.last} ${p.first}${evCount(m,p.id,"a")>1?" ("+evCount(m,p.id,"a")+")":""}`).join("\n");
-  if(sc) t += `\nMarcatori:\n${sc}\n`;
+    .map(p=>`• ${p.last} ${p.first}: ${evCount(m,p.id,"a")} (${det(p,"a")})`).join("\n");
+  if(sc2) t += `\nMarcatori:\n${sc2}\n`;
   if(as) t += `\nAssist:\n${as}\n`;
   t += `\nMinuti giocati:\n`;
   t += [...squad].sort((a,b)=>minutesOf(m,b.id)-minutesOf(m,a.id))
@@ -1158,7 +1465,6 @@ function shareTabellino(){
   t += `\n\nBravi ragazzi! 💪`;
   shareText(t, "Tabellino");
 }
-
 
 /* ============ CONVOCAZIONE STAMPABILE ============ */
 const NOTE_DEF = "Portare sempre parastinchi e borraccia personale.\n" +
@@ -1456,6 +1762,7 @@ function exportTraining(){
 function exportMatch(){
   const m = theMatch();
   const squad = roster().filter(p => m.callups.includes(p.id));
+  const sc = scoreOf(m);
   const head = [
     [db.club, team().name],
     ["Partita", `${db.club} - ${m.opponent}`],
@@ -1463,25 +1770,40 @@ function exportMatch(){
     ["Dove", m.venue === "home" ? "In casa" : "In trasferta"],
     ["Campo", m.place || ""],
     ["Formato", m.format], ["Modulo", m.formation],
-    ["Durata tempi", m.periods.join(" + ") + " min"],
     [],
-    ["Numero","Cognome","Nome","1° tempo","2° tempo","3° tempo","Minuti","Gol","Assist"],
+    ["Risultato a tempi", `${sc.w}-${sc.l}`],
+    ["Tempi V-P-S", `${sc.w}-${sc.d}-${sc.l}`],
+    ["Punti", sc.punti],
+    ["Gol complessivi", `${sc.gf}-${sc.ga}`],
+    ["Differenza reti", sc.diff],
+    [],
+    ["Tempo","Gol fatti","Gol subiti","Differenza","Esito"],
+    ...sc.periods.map(pe => [pe.lab, pe.gf, pe.ga, pe.diff,
+      pe.res === "V" ? "Vinto" : pe.res === "S" ? "Perso" : "Pari"]),
+    [],
+    ["Numero","Cognome","Nome", ...SEGS.map(x=>x.sh+" (min)"), "Minuti totali","Gol","Assist","Subentrato"],
   ];
   squad.forEach(p => head.push([
     p.num ? Number(p.num) : "", p.last, p.first,
-    ...[1,2,3].map(t => Object.values(m.lineups[t]).includes(p.id) ? "in campo" : "—"),
-    minutesOf(m, p.id), evCount(m,p.id,"g"), evCount(m,p.id,"a"),
+    ...SEGKEYS.map(k => minutesIn(m,k,p.id)),
+    minutesOf(m,p.id), evCount(m,p.id,"g"), evCount(m,p.id,"a"),
+    SEGKEYS.some(k => minutesIn(m,k,p.id)>0 && !Object.values(m.lineups[k]).includes(p.id)) ? "sì" : "",
   ]));
-  head.push([], ["Gol totali", m.events.filter(e=>e.t==="g").length]);
 
-  const ev = [["Tempo","Tipo","Cognome","Nome"]];
+  const ev = [["Segmento","Tempo","Tipo","Cognome","Nome"]];
   m.events.forEach(e => {
-    const p = db.players.find(x=>x.id===e.pid);
-    if(p) ev.push([e.p, e.t === "g" ? "Gol" : "Assist", p.last, p.first]);
+    const p = db.players.find(x=>x.id===e.pid), si = segInfo(e.seg);
+    if(p && si) ev.push([si.sh, si.per, e.t === "g" ? "Gol" : "Assist", p.last, p.first]);
+  });
+
+  const sub = [["Segmento","Minuto","Entra","Esce"]];
+  m.subs.sort((a,b)=>SEGKEYS.indexOf(a.seg)-SEGKEYS.indexOf(b.seg) || a.min-b.min).forEach(x => {
+    const pin = db.players.find(p=>p.id===x.in), pout = db.players.find(p=>p.id===x.out);
+    sub.push([segInfo(x.seg).sh, x.min, pin ? pin.last+" "+pin.first : "", pout ? pout.last+" "+pout.first : ""]);
   });
 
   dlFile(`partita-${m.date}-${slug(m.opponent)}.xls`,
-    toXls([{name:"Tabellino", rows:head}, {name:"Eventi", rows:ev}]), XLSMIME);
+    toXls([{name:"Tabellino", rows:head}, {name:"Eventi", rows:ev}, {name:"Cambi", rows:sub}]), XLSMIME);
   toast("File scaricato");
 }
 
@@ -1506,11 +1828,11 @@ function exportAll(){
     pres.push([p.last, p.first, ...cells, tot, ok, tot ? Math.round(ok/tot*100) : ""]);
   });
 
-  const part = [["Data","Avversario","Dove","Formato","Convocati","Gol"]];
-  ms.forEach(m => { normMatch(m); part.push([
+  const part = [["Data","Avversario","Dove","Formato","Convocati","Tempi vinti","V-P-S","Gol fatti","Gol subiti","Punti"]];
+  ms.forEach(m => { normMatch(m); const sc = scoreOf(m); part.push([
     new Date(m.date+"T12:00").toLocaleDateString("it-IT"), m.opponent,
-    m.venue==="home"?"Casa":"Trasferta", m.format,
-    m.callups.length, m.events.filter(e=>e.t==="g").length]); });
+    m.venue==="home"?"Casa":"Trasferta", m.format, m.callups.length,
+    sc.w, `${sc.w}-${sc.d}-${sc.l}`, sc.gf, sc.ga, sc.punti]); });
 
   const min = [["Cognome","Nome","Minuti totali","Gol","Assist","Partite giocate"]];
   r.forEach(p => {
