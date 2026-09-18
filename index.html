@@ -199,6 +199,61 @@ textarea{resize:vertical}
 .freq.mid{background:#FEF3C7;color:#B45309}
 .freq.lo{background:#FFE4E6;color:#BE123C}
 .preview{width:100%;border:1px solid var(--line);border-radius:12px;margin-top:12px;display:block}
+
+/* ===== restyle ===== */
+:root{
+  --shadow-sm:0 1px 2px rgba(15,23,42,.05);
+  --shadow:0 1px 3px rgba(15,23,42,.07), 0 8px 24px -16px rgba(15,23,42,.35);
+  --navy:#16233A;
+}
+body{background:#EEF2F7}
+.phone,main{scroll-behavior:smooth}
+header{background:linear-gradient(160deg,#8A1528 0%,var(--bord) 45%,var(--bord-deep) 100%);
+  box-shadow:0 6px 20px -12px rgba(102,11,26,.9)}
+.card{border-color:rgba(226,232,240,.9);box-shadow:var(--shadow-sm);border-radius:18px;
+  transition:box-shadow .2s ease}
+.card:hover{box-shadow:var(--shadow)}
+.btn{transition:transform .12s ease, box-shadow .2s ease, background .2s ease, opacity .2s}
+.btn:not(:disabled):hover{box-shadow:var(--shadow)}
+.btn:not(:disabled):active{transform:scale(.985)}
+.btn.primary{background:linear-gradient(180deg,#8A1528,var(--bord))}
+.btn.accent{background:linear-gradient(180deg,#6FC9F0,var(--cel))}
+nav button{transition:color .18s ease}
+nav button[aria-current="true"]{position:relative}
+nav button[aria-current="true"]::before{content:"";position:absolute;top:0;left:50%;
+  transform:translateX(-50%);width:28px;height:3px;border-radius:0 0 4px 4px;background:var(--bord)}
+.plist li{box-shadow:var(--shadow-sm);border-radius:16px;transition:box-shadow .2s}
+.states button{transition:transform .08s ease, background .15s ease, color .15s ease}
+.jersey{background:linear-gradient(180deg,#fff,var(--ice));box-shadow:inset 0 0 0 1px rgba(226,232,240,.9)}
+.freq,.flag{letter-spacing:.01em}
+
+/* pillole di esito */
+.freq.hi{background:#DCFCE7;color:#166534;box-shadow:inset 0 0 0 1px rgba(22,101,52,.12)}
+.freq.mid{background:#FEF3C7;color:#92400E;box-shadow:inset 0 0 0 1px rgba(146,64,14,.12)}
+.freq.lo{background:#FFE4E6;color:#9F1239;box-shadow:inset 0 0 0 1px rgba(159,18,57,.12)}
+
+/* campo: erba a strisce e badge curati */
+.pitch{background:#2C7A45;box-shadow:inset 0 0 60px rgba(0,0,0,.28);aspect-ratio:3/4}
+.pitch::before{content:"";position:absolute;inset:0;
+  background:repeating-linear-gradient(180deg,rgba(255,255,255,.055) 0 8.5%,rgba(0,0,0,.045) 8.5% 17%)}
+.slot .bub{box-shadow:0 3px 10px rgba(0,0,0,.32);transition:transform .12s ease}
+.slot:active .bub{transform:scale(.93)}
+.slot.full .bub{background:linear-gradient(180deg,#8A1528,var(--bord-deep));
+  border:2px solid rgba(255,255,255,.85)}
+.slot .lb{backdrop-filter:blur(2px);font-weight:700;letter-spacing:.01em}
+
+/* pulsante in attesa */
+.spin{display:inline-block;width:14px;height:14px;border-radius:50%;vertical-align:-2px;
+  border:2px solid rgba(255,255,255,.35);border-top-color:#fff;animation:sp .7s linear infinite}
+.btn.ghost .spin{border-color:rgba(100,116,139,.3);border-top-color:var(--soft)}
+@keyframes sp{to{transform:rotate(360deg)}}
+.btn:disabled{opacity:.75}
+
+@media (min-width:640px){
+  .phone{max-width:620px;border-radius:0 0 22px 22px}
+  main{padding:18px}
+  .pitch{aspect-ratio:4/3}
+}
 </style>
 </head>
 <body>
@@ -602,7 +657,7 @@ function viewRoll(){
   <button class="btn ${c.done===r.length?"primary":"ghost"}" onclick="shareAppello()"
     ${c.done<r.length?"disabled":""}>
     ${c.done<r.length ? `Mancano ${r.length-c.done} atleti` : "Condividi il riepilogo"}</button>
-  <button class="btn ghost" style="margin-top:9px" onclick="exportTraining()">Scarica l'allenamento (Excel)</button>
+  <button class="btn ghost" style="margin-top:9px" onclick="exportTraining(this)">Scarica l'allenamento (Excel)</button>
   <p class="muted" style="text-align:center;margin-top:9px">Le presenze si salvano da sole.</p>`;
 }
 
@@ -828,7 +883,7 @@ function viewReport(){
     <label for="mm">Mese</label>
     <input id="mm" type="month" value="${repMonth}" onchange="repMonth=this.value;render()">
     <p class="muted" style="margin-top:8px;text-transform:capitalize">${monthLabel(repMonth)}</p>
-    <button class="btn primary" style="margin-top:11px" onclick="exportMonth()">
+    <button class="btn primary" style="margin-top:11px" onclick="exportMonth(this)">
       Scarica il report del mese (Excel)</button>
   </div>
 
@@ -841,7 +896,7 @@ function viewReport(){
   <div class="card">
     <h2>Archivio completo</h2>
     <p class="muted">Rosa, presenze, partite e minutaggio di tutta la stagione.</p>
-    <button class="btn ghost" style="margin-top:11px" onclick="exportAll()">Scarica tutto (Excel)</button>
+    <button class="btn ghost" style="margin-top:11px" onclick="exportAll(this)">Scarica tutto (Excel)</button>
   </div>`;
 }
 
@@ -867,53 +922,71 @@ function backupBanner(){
 }
 
 /* --- esportazione del mese --- */
-function exportMonth(){
-  const r = roster(), mk = repMonth;
-  const ss = db.sessions.filter(s => s.teamId === db.current && inMonth(s.date, mk))
-                        .sort((a,b)=>a.date.localeCompare(b.date));
-  const ms = db.matches.filter(m => m.teamId === db.current && inMonth(m.date, mk))
-                       .sort((a,b)=>a.date.localeCompare(b.date));
+function exportMonth(el){
+  return busy(el, () => {
+    const r = roster(), mk = repMonth;
+    const ss = db.sessions.filter(s => s.teamId === db.current && inMonth(s.date, mk))
+                          .sort((a,b)=>a.date.localeCompare(b.date));
+    const ms = db.matches.filter(m => m.teamId === db.current && inMonth(m.date, mk))
+                         .sort((a,b)=>a.date.localeCompare(b.date));
+    ms.forEach(normMatch);
 
-  const rie = [
-    [db.club, team().name],
-    ["Report mensile", monthLabel(mk)],
-    ["Allenamenti nel mese", ss.length],
-    ["Partite nel mese", ms.length],
-    [],
-    ["Numero","Cognome","Nome","Allenamenti","Presenze","Assenze","Giustificate","Infortuni",
-     "Frequenza %","Partite","Minuti","Gol","Dettaglio gol","Assist","Dettaglio assist"],
-  ];
-  r.forEach(p => {
-    const st = monthStats(p.id, mk);
-    rie.push([p.num ? Number(p.num) : "", p.last, p.first,
-      st.registrati, st.P, st.A, st.G, st.I, st.freq ?? "",
-      st.partite, st.minuti, st.golTot, detSeg(st.gol), st.assTot, detSeg(st.ass)]);
+    const rie = {
+      name: "Riepilogo",
+      title: `${db.club} — ${team().name}`,
+      meta: [["Report mensile", monthLabel(mk)],
+             ["Allenamenti nel mese", ss.length],
+             ["Partite nel mese", ms.length]],
+      head: ["Cognome","Nome","Numero","Allenamenti","Presenze","Assenze","Giustificate",
+             "Infortuni","Frequenza %","Partite","Minuti","Gol","Dettaglio gol","Assist","Dettaglio assist"],
+      body: r.map(p => {
+        const st = monthStats(p.id, mk);
+        return [p.last, p.first, p.num ? Number(p.num) : "", st.registrati, st.P, st.A, st.G, st.I,
+                st.freq ?? "", st.partite, st.minuti, st.golTot, detSeg(st.gol), st.assTot, detSeg(st.ass)];
+      }),
+    };
+    const col = n => rie.body.reduce((x, row) => x + (typeof row[n] === "number" ? row[n] : 0), 0);
+    rie.total = ["Totali","","", col(3), col(4), col(5), col(6), col(7), "", col(9), col(10), col(11), "", col(13), ""];
+
+    const pres = {
+      name: "Presenze",
+      title: `Allenamenti di ${monthLabel(mk)}`,
+      head: ["Cognome","Nome", ...ss.map(x => dShort(x.date)), "Presenze"],
+      body: r.map(p => {
+        let ok = 0;
+        const cells = ss.map(x => {
+          const st = db.att[x.id]?.[p.id]?.s;
+          if(st === "P") ok++;
+          return st ? LAB[st] : "";
+        });
+        return [p.last, p.first, ...cells, ok];
+      }),
+    };
+
+    const eventi = {
+      name: "Gol e assist",
+      head: ["Data","Avversario","Segmento","Tempo","Tipo","Cognome","Nome"],
+      body: ms.flatMap(m => m.events.map(e => {
+        const p = db.players.find(x => x.id === e.pid), si = segInfo(e.seg);
+        return p && si ? [new Date(m.date+"T12:00").toLocaleDateString("it-IT"),
+          m.opponent, si.sh, si.per, e.t === "g" ? "Gol" : "Assist", p.last, p.first] : null;
+      }).filter(Boolean)),
+    };
+
+    const gare = {
+      name: "Gare",
+      head: ["Data","Avversario","Tempi vinti","V-P-S","Gol fatti","Gol subiti","Punti"],
+      body: ms.map(m => { const sc = scoreOf(m);
+        return [new Date(m.date+"T12:00").toLocaleDateString("it-IT"), m.opponent,
+          `${sc.w}-${sc.l}`, `${sc.w}-${sc.d}-${sc.l}`, sc.gf, sc.ga, sc.punti]; }),
+    };
+    if(ms.length) gare.total = ["Totali","","","",
+      ms.reduce((n,m)=>n+scoreOf(m).gf,0), ms.reduce((n,m)=>n+scoreOf(m).ga,0),
+      ms.reduce((n,m)=>n+scoreOf(m).punti,0)];
+
+    saveXlsx(`report-${mk}-${slug(team().name)}.xlsx`, [rie, pres, eventi, gare]);
+    toast("Report del mese scaricato");
   });
-
-  const pres = [["Cognome","Nome", ...ss.map(x => dShort(x.date))]];
-  r.forEach(p => pres.push([p.last, p.first,
-    ...ss.map(x => LAB[db.att[x.id]?.[p.id]?.s] || "")]));
-
-  const eventi = [["Data","Avversario","Segmento","Tempo","Tipo","Cognome","Nome"]];
-  ms.forEach(m => {
-    normMatch(m);
-    m.events.forEach(e => {
-      const p = db.players.find(x=>x.id===e.pid), si = segInfo(e.seg);
-      if(p && si) eventi.push([new Date(m.date+"T12:00").toLocaleDateString("it-IT"),
-        m.opponent, si.sh, si.per, e.t==="g"?"Gol":"Assist", p.last, p.first]);
-    });
-  });
-
-  const gare = [["Data","Avversario","Tempi vinti","V-P-S","Gol fatti","Gol subiti","Punti"]];
-  ms.forEach(m => { const sc = scoreOf(normMatch(m));
-    gare.push([new Date(m.date+"T12:00").toLocaleDateString("it-IT"), m.opponent,
-      sc.w, `${sc.w}-${sc.d}-${sc.l}`, sc.gf, sc.ga, sc.punti]); });
-
-  dlFile(`report-${mk}-${slug(team().name)}.xls`, toXls([
-    {name:"Riepilogo", rows:rie}, {name:"Presenze", rows:pres},
-    {name:"Gol e assist", rows:eventi}, {name:"Gare", rows:gare},
-  ]), XLSMIME);
-  toast("Report del mese scaricato");
 }
 
 /* ============ CONDIVISIONE ============ */
@@ -1325,7 +1398,7 @@ function viewMatch(){
     <h3 class="muted" style="margin:14px 0 6px">Minutaggio</h3>
     ${mins}
     <button class="btn wa" style="margin-top:14px" onclick="shareTabellino()">Invia il tabellino su WhatsApp</button>
-    <button class="btn ghost" style="margin-top:9px" onclick="exportMatch()">Scarica la partita (Excel)</button>
+    <button class="btn ghost" style="margin-top:9px" onclick="exportMatch(this)">Scarica la partita (Excel)</button>
   </div>`;
 }
 
@@ -1701,155 +1774,390 @@ function shareConv(){
 }
 
 
-/* ============ ESPORTAZIONE EXCEL ============ */
-/* Formato SpreadsheetML 2003: è XML puro, quindi si genera senza
-   librerie e si apre in Excel, Numbers e Google Fogli mantenendo
-   più fogli nello stesso file. */
+/* ============ ESPORTAZIONE EXCEL (.xlsx) ============ */
+/* Un .xlsx è uno ZIP di file XML. Scriverlo a mano costa una sessantina
+   di righe e ci risparmia una libreria da 900 kB: l'app resta un file
+   solo e continua a funzionare senza rete. */
 
-function dlFile(name, content, mime){
-  const blob = new Blob([content], {type:mime});
+/* --- ZIP, metodo "store": nessuna compressione, nessuna dipendenza --- */
+const CRC_T = (() => {
+  const t = new Uint32Array(256);
+  for(let n = 0; n < 256; n++){
+    let c = n;
+    for(let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1;
+    t[n] = c >>> 0;
+  }
+  return t;
+})();
+function crc32(buf){
+  let c = 0xFFFFFFFF;
+  for(let i = 0; i < buf.length; i++) c = CRC_T[(c ^ buf[i]) & 0xFF] ^ (c >>> 8);
+  return (c ^ 0xFFFFFFFF) >>> 0;
+}
+function zipStore(files){
+  const enc = new TextEncoder();
+  const parts = [], central = [];
+  let offset = 0;
+
+  const u16 = n => [n & 255, (n >>> 8) & 255];
+  const u32 = n => [n & 255, (n >>> 8) & 255, (n >>> 16) & 255, (n >>> 24) & 255];
+
+  files.forEach(f => {
+    const name = enc.encode(f.name);
+    const data = typeof f.data === "string" ? enc.encode(f.data) : f.data;
+    const crc = crc32(data);
+    const local = new Uint8Array([
+      0x50,0x4b,0x03,0x04, ...u16(20), ...u16(0), ...u16(0), ...u16(0), ...u16(0),
+      ...u32(crc), ...u32(data.length), ...u32(data.length),
+      ...u16(name.length), ...u16(0),
+    ]);
+    parts.push(local, name, data);
+    central.push({name, crc, size: data.length, offset});
+    offset += local.length + name.length + data.length;
+  });
+
+  const dir = [];
+  central.forEach(c => {
+    dir.push(new Uint8Array([
+      0x50,0x4b,0x01,0x02, ...u16(20), ...u16(20), ...u16(0), ...u16(0), ...u16(0), ...u16(0),
+      ...u32(c.crc), ...u32(c.size), ...u32(c.size),
+      ...u16(c.name.length), ...u16(0), ...u16(0), ...u16(0), ...u16(0), ...u32(0),
+      ...u32(c.offset),
+    ]), c.name);
+  });
+  const dirSize = dir.reduce((n, d) => n + d.length, 0);
+  const end = new Uint8Array([
+    0x50,0x4b,0x05,0x06, ...u16(0), ...u16(0),
+    ...u16(central.length), ...u16(central.length),
+    ...u32(dirSize), ...u32(offset), ...u16(0),
+  ]);
+  return new Blob([...parts, ...dir, end], {type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+}
+
+/* --- fogli di stile: intestazioni scure, righe zebrate, bordi --- */
+const XLS_STYLES = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+<fonts count="5">
+ <font><sz val="11"/><name val="Calibri"/><color rgb="FF1E293B"/></font>
+ <font><b/><sz val="11"/><name val="Calibri"/><color rgb="FFFFFFFF"/></font>
+ <font><b/><sz val="11"/><name val="Calibri"/><color rgb="FF1E293B"/></font>
+ <font><b/><sz val="16"/><name val="Calibri"/><color rgb="FF7B1123"/></font>
+ <font><sz val="10"/><name val="Calibri"/><color rgb="FF64748B"/></font>
+</fonts>
+<fills count="4">
+ <fill><patternFill patternType="none"/></fill>
+ <fill><patternFill patternType="gray125"/></fill>
+ <fill><patternFill patternType="solid"><fgColor rgb="FF16233A"/><bgColor indexed="64"/></patternFill></fill>
+ <fill><patternFill patternType="solid"><fgColor rgb="FFF1F5F9"/><bgColor indexed="64"/></patternFill></fill>
+</fills>
+<borders count="4">
+ <border><left/><right/><top/><bottom/><diagonal/></border>
+ <border>
+  <left style="thin"><color rgb="FFCBD5E1"/></left><right style="thin"><color rgb="FFCBD5E1"/></right>
+  <top style="thin"><color rgb="FFCBD5E1"/></top><bottom style="thin"><color rgb="FFCBD5E1"/></bottom><diagonal/></border>
+ <border>
+  <left style="thin"><color rgb="FFCBD5E1"/></left><right style="thin"><color rgb="FFCBD5E1"/></right>
+  <top style="thin"><color rgb="FF16233A"/></top><bottom style="double"><color rgb="FF16233A"/></bottom><diagonal/></border>
+ <border><left/><right/><top/><bottom style="thin"><color rgb="FF7B1123"/></bottom><diagonal/></border>
+</borders>
+<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
+<cellXfs count="10">
+ <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
+ <xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>
+ <xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment horizontal="left" vertical="center"/></xf>
+ <xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
+ <xf numFmtId="0" fontId="0" fillId="3" borderId="1" xfId="0" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="left" vertical="center"/></xf>
+ <xf numFmtId="0" fontId="0" fillId="3" borderId="1" xfId="0" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
+ <xf numFmtId="0" fontId="2" fillId="0" borderId="2" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="left" vertical="center"/></xf>
+ <xf numFmtId="0" fontId="2" fillId="0" borderId="2" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
+ <xf numFmtId="0" fontId="3" fillId="0" borderId="3" xfId="0" applyFont="1" applyBorder="1"/>
+ <xf numFmtId="0" fontId="4" fillId="0" borderId="0" xfId="0" applyFont="1"/>
+</cellXfs>
+<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
+<dxfs count="0"/>
+<tableStyles count="0" defaultTableStyle="TableStyleMedium2" defaultPivotStyle="PivotStyleLight16"/>
+</styleSheet>`;
+
+const S = {TITLE:8, META:9, HEAD:1, L:2, C:3, ZL:4, ZC:5, TL:6, TC:7};
+const XE = v => String(v ?? "").replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function colLetter(n){
+  let sxx = "";
+  while(n >= 0){ sxx = String.fromCharCode(65 + (n % 26)) + sxx; n = Math.floor(n / 26) - 1; }
+  return sxx;
+}
+
+/* Un foglio: titolo, coppie chiave/valore, intestazione, corpo, totali. */
+function sheetXml(sh){
+  const rows = [];
+  let n = 0;
+  const cell = (v, r, c, st) => {
+    const ref = colLetter(c) + r;
+    if(typeof v === "number" && isFinite(v))
+      return `<c r="${ref}" s="${st}"><v>${v}</v></c>`;
+    if(v === "" || v === null || v === undefined) return `<c r="${ref}" s="${st}"/>`;
+    return `<c r="${ref}" s="${st}" t="inlineStr"><is><t xml:space="preserve">${XE(v)}</t></is></c>`;
+  };
+
+  if(sh.title){ n++; rows.push(`<row r="${n}" ht="26" customHeight="1">${cell(sh.title, n, 0, S.TITLE)}</row>`); n++; }
+  (sh.meta || []).forEach(([k, v]) => {
+    n++;
+    rows.push(`<row r="${n}">${cell(k, n, 0, S.META)}${cell(v, n, 1, S.META)}</row>`);
+  });
+  if(sh.meta && sh.meta.length) n++;
+
+  let headRow = 0, lastRow = 0;
+  if(sh.head){
+    n++; headRow = n;
+    rows.push(`<row r="${n}" ht="30" customHeight="1">${
+      sh.head.map((h, c) => cell(h, n, c, S.HEAD)).join("")}</row>`);
+  }
+  (sh.body || []).forEach((r, idx) => {
+    n++; lastRow = n;
+    const zebra = idx % 2 === 1;
+    rows.push(`<row r="${n}">${r.map((v, c) => cell(v, n, c,
+      typeof v === "number" || c > 2 ? (zebra ? S.ZC : S.C) : (zebra ? S.ZL : S.L))).join("")}</row>`);
+  });
+  if(sh.total){
+    n++; lastRow = n;
+    rows.push(`<row r="${n}">${sh.total.map((v, c) => cell(v, n, c,
+      typeof v === "number" || c > 2 ? S.TC : S.TL)).join("")}</row>`);
+  }
+
+  /* larghezza colonne dal contenuto: mai una colonna di ### */
+  const widths = [];
+  [sh.head || [], ...(sh.body || []), sh.total || []].forEach(r =>
+    (r || []).forEach((v, c) => {
+      const len = String(v ?? "").length + 3;
+      widths[c] = Math.max(widths[c] || 8, Math.min(42, len));
+    }));
+  const cols = widths.length
+    ? `<cols>${widths.map((w, c) => `<col min="${c+1}" max="${c+1}" width="${w}" customWidth="1"/>`).join("")}</cols>`
+    : "";
+
+  const filter = (headRow && lastRow > headRow)
+    ? `<autoFilter ref="A${headRow}:${colLetter((sh.head.length||1)-1)}${lastRow}"/>` : "";
+  const freeze = headRow
+    ? `<sheetViews><sheetView workbookViewId="0"><pane ySplit="${headRow}" topLeftCell="A${headRow+1}" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>`
+    : "";
+
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">${freeze}${cols}
+<sheetData>${rows.join("")}</sheetData>${filter}</worksheet>`;
+}
+
+function buildXlsx(sheets){
+  const safe = t => String(t).replace(/[\\\/\?\*\[\]:]/g, " ").slice(0, 31);
+  const files = [
+    {name:"[Content_Types].xml", data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+<Default Extension="xml" ContentType="application/xml"/>
+<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
+${sheets.map((_, i) => `<Override PartName="/xl/worksheets/sheet${i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join("")}
+</Types>`},
+    {name:"_rels/.rels", data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
+</Relationships>`},
+    {name:"xl/workbook.xml", data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+ xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+<sheets>${sheets.map((sh, i) => `<sheet name="${XE(safe(sh.name))}" sheetId="${i+1}" r:id="rId${i+1}"/>`).join("")}</sheets>
+</workbook>`},
+    {name:"xl/_rels/workbook.xml.rels", data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+${sheets.map((_, i) => `<Relationship Id="rId${i+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i+1}.xml"/>`).join("")}
+<Relationship Id="rId${sheets.length+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+</Relationships>`},
+    {name:"xl/styles.xml", data:XLS_STYLES},
+    ...sheets.map((sh, i) => ({name:`xl/worksheets/sheet${i+1}.xml`, data:sheetXml(sh)})),
+  ];
+  return zipStore(files);
+}
+
+function dlBlob(name, blob){
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
   a.download = name;
   a.click();
-  setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
 }
-const X = v => String(v ?? "").replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+function dlFile(name, content, mime){ dlBlob(name, new Blob([content], {type:mime})); }
+function saveXlsx(name, sheets){ dlBlob(name, buildXlsx(sheets)); }
 
-function toXls(sheets){
-  const cell = v => typeof v === "number"
-    ? `<Cell><Data ss:Type="Number">${v}</Data></Cell>`
-    : `<Cell><Data ss:Type="String">${X(v)}</Data></Cell>`;
-  const body = sheets.map(sh => `
- <Worksheet ss:Name="${X(sh.name).slice(0,31)}"><Table>
-${sh.rows.map(r => `  <Row>${r.map(cell).join("")}</Row>`).join("\n")}
- </Table></Worksheet>`).join("");
-  return `<?xml version="1.0"?>
-<?mso-application progid="Excel.Sheet"?>
-<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
- xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">${body}
-</Workbook>`;
+/* Indicatore di attesa sul pulsante che ha lanciato l'export. */
+async function busy(el, fn){
+  if(!el) return fn();
+  const old = el.innerHTML;
+  el.disabled = true;
+  el.innerHTML = `<span class="spin"></span> Preparo il file…`;
+  try{ await new Promise(r => setTimeout(r, 30)); await fn(); }
+  finally{ el.disabled = false; el.innerHTML = old; }
 }
-const XLSMIME = "application/vnd.ms-excel";
+
 const slug = t => String(t).replace(/[^\w]+/g, "-").replace(/^-|-$/g, "");
 const LAB = {P:"Presente", A:"Assente", G:"Giustificato", I:"Infortunato"};
 
-/* --- un singolo allenamento, subito dopo l'appello --- */
-function exportTraining(){
-  const sess = sessById(curSess);
-  if(!sess) return toast("Apri prima un allenamento");
-  const a = db.att[sess.id] || {};
-  const rows = [
-    [db.club, team().name],
-    ["Allenamento", dLong(sess.date)],
-    ["Campo", sess.pitch || ""],
-    [],
-    ["Numero","Cognome","Nome","Stato","Nota","Certificato"],
-  ];
-  roster().forEach(p => rows.push([
-    p.num ? Number(p.num) : "", p.last, p.first,
-    LAB[a[p.id]?.s] || "non registrato", a[p.id]?.n || "", p.cert || ""
-  ]));
-  const c = {P:0,A:0,G:0,I:0};
-  roster().forEach(p => { const st = a[p.id]?.s; if(st) c[st]++; });
-  rows.push([], ["Presenti", c.P], ["Assenti", c.A], ["Giustificati", c.G], ["Infortunati", c.I]);
-
-  dlFile(`allenamento-${sess.date}-${slug(team().name)}.xls`, toXls([{name:"Allenamento", rows}]), XLSMIME);
-  toast("File scaricato");
+/* --- un singolo allenamento --- */
+function exportTraining(el){
+  return busy(el, () => {
+    const sess = sessById(curSess);
+    if(!sess) return toast("Apri prima un allenamento");
+    const a = db.att[sess.id] || {};
+    const c = {P:0,A:0,G:0,I:0};
+    const body = roster().map(p => {
+      const st = a[p.id]?.s; if(st) c[st]++;
+      return [p.last, p.first, p.num ? Number(p.num) : "", LAB[st] || "non registrato",
+              a[p.id]?.n || "", p.cert || ""];
+    });
+    saveXlsx(`allenamento-${sess.date}-${slug(team().name)}.xlsx`, [{
+      name: "Allenamento",
+      title: `${db.club} — ${team().name}`,
+      meta: [["Allenamento", dLong(sess.date)], ["Orario", sess.time || ""],
+             ["Campo", sess.pitch || ""], ["Note", sess.notes || ""]],
+      head: ["Cognome","Nome","Numero","Stato","Nota tecnica","Certificato"],
+      body,
+      total: ["Totali", "", body.length, `${c.P} P · ${c.A} A · ${c.G} G · ${c.I} I`, "", ""],
+    }]);
+    toast("File scaricato");
+  });
 }
 
-/* --- una singola partita, a fine gara --- */
-function exportMatch(){
-  const m = theMatch();
-  const squad = roster().filter(p => m.callups.includes(p.id));
-  const sc = scoreOf(m);
-  const head = [
-    [db.club, team().name],
-    ["Partita", `${db.club} - ${m.opponent}`],
-    ["Data", new Date(m.date+"T12:00").toLocaleDateString("it-IT")],
-    ["Dove", m.venue === "home" ? "In casa" : "In trasferta"],
-    ["Campo", m.place || ""],
-    ["Formato", m.format], ["Modulo", m.formation],
-    [],
-    ["Risultato a tempi", `${sc.w}-${sc.l}`],
-    ["Tempi V-P-S", `${sc.w}-${sc.d}-${sc.l}`],
-    ["Punti", sc.punti],
-    ["Gol complessivi", `${sc.gf}-${sc.ga}`],
-    ["Differenza reti", sc.diff],
-    [],
-    ["Tempo","Gol fatti","Gol subiti","Differenza","Esito"],
-    ...sc.periods.map(pe => [pe.lab, pe.gf, pe.ga, pe.diff,
-      pe.res === "V" ? "Vinto" : pe.res === "S" ? "Perso" : "Pari"]),
-    [],
-    ["Numero","Cognome","Nome", ...SEGS.map(x=>x.sh+" (min)"), "Minuti totali","Gol","Assist","Subentrato"],
-  ];
-  squad.forEach(p => head.push([
-    p.num ? Number(p.num) : "", p.last, p.first,
-    ...SEGKEYS.map(k => minutesIn(m,k,p.id)),
-    minutesOf(m,p.id), evCount(m,p.id,"g"), evCount(m,p.id,"a"),
-    SEGKEYS.some(k => minutesIn(m,k,p.id)>0 && !Object.values(m.lineups[k]).includes(p.id)) ? "sì" : "",
-  ]));
+/* --- una singola partita --- */
+function exportMatch(el){
+  return busy(el, () => {
+    const m = theMatch();
+    const squad = roster().filter(p => m.callups.includes(p.id));
+    const sc = scoreOf(m);
 
-  const ev = [["Segmento","Tempo","Tipo","Cognome","Nome"]];
-  m.events.forEach(e => {
-    const p = db.players.find(x=>x.id===e.pid), si = segInfo(e.seg);
-    if(p && si) ev.push([si.sh, si.per, e.t === "g" ? "Gol" : "Assist", p.last, p.first]);
+    const tab = {
+      name: "Tabellino",
+      title: `${db.club} — ${m.opponent}`,
+      meta: [
+        ["Data", new Date(m.date+"T12:00").toLocaleDateString("it-IT")],
+        ["Dove", m.venue === "home" ? "In casa" : "In trasferta"],
+        ["Campo", m.place || ""],
+        ["Formato", m.format], ["Modulo", m.formation],
+        ["Risultato a tempi", `${sc.w}-${sc.l}`],
+        ["Tempi V-P-S", `${sc.w}-${sc.d}-${sc.l}`],
+        ["Punti", sc.punti],
+        ["Gol complessivi", `${sc.gf}-${sc.ga}`],
+        ["Differenza reti", sc.diff],
+      ],
+      head: ["Cognome","Nome","Numero", ...SEGS.map(x => x.sh + " (min)"),
+             "Minuti","Gol","Assist","Subentrato"],
+      body: squad.map(p => [p.last, p.first, p.num ? Number(p.num) : "",
+        ...SEGKEYS.map(k => minutesIn(m,k,p.id)),
+        minutesOf(m,p.id), evCount(m,p.id,"g"), evCount(m,p.id,"a"),
+        SEGKEYS.some(k => minutesIn(m,k,p.id) > 0 && !Object.values(m.lineups[k]).includes(p.id)) ? "sì" : ""]),
+    };
+    tab.total = ["Totali", "", "", ...SEGKEYS.map(k => squad.reduce((n,p)=>n+minutesIn(m,k,p.id),0)),
+      squad.reduce((n,p)=>n+minutesOf(m,p.id),0), sc.gf,
+      squad.reduce((n,p)=>n+evCount(m,p.id,"a"),0), ""];
+
+    const tempi = {
+      name: "Tempi",
+      title: "Punteggio federale",
+      head: ["Tempo","Gol fatti","Gol subiti","Differenza","Esito","Punti"],
+      body: sc.periods.map(pe => [pe.lab, pe.gf, pe.ga, pe.diff,
+        pe.res === "V" ? "Vinto" : pe.res === "S" ? "Perso" : "Pari", pe.res === "V" ? 1 : 0]),
+      total: ["Totale", sc.gf, sc.ga, sc.diff, `${sc.w}-${sc.d}-${sc.l}`, sc.punti],
+    };
+
+    const eventi = {
+      name: "Eventi",
+      head: ["Segmento","Tempo","Tipo","Cognome","Nome"],
+      body: m.events.map(e => {
+        const p = db.players.find(x => x.id === e.pid), si = segInfo(e.seg);
+        return p && si ? [si.sh, si.per, e.t === "g" ? "Gol" : "Assist", p.last, p.first] : null;
+      }).filter(Boolean),
+    };
+
+    const cambi = {
+      name: "Cambi",
+      head: ["Segmento","Minuto","Entra","Esce"],
+      body: [...m.subs].sort((a,b)=>SEGKEYS.indexOf(a.seg)-SEGKEYS.indexOf(b.seg) || a.min-b.min)
+        .map(x => {
+          const pin = db.players.find(p=>p.id===x.in), pout = db.players.find(p=>p.id===x.out);
+          return [segInfo(x.seg).sh, x.min, pin ? pin.last+" "+pin.first : "", pout ? pout.last+" "+pout.first : ""];
+        }),
+    };
+
+    saveXlsx(`partita-${m.date}-${slug(m.opponent)}.xlsx`, [tab, tempi, eventi, cambi]);
+    toast("File scaricato");
   });
-
-  const sub = [["Segmento","Minuto","Entra","Esce"]];
-  m.subs.sort((a,b)=>SEGKEYS.indexOf(a.seg)-SEGKEYS.indexOf(b.seg) || a.min-b.min).forEach(x => {
-    const pin = db.players.find(p=>p.id===x.in), pout = db.players.find(p=>p.id===x.out);
-    sub.push([segInfo(x.seg).sh, x.min, pin ? pin.last+" "+pin.first : "", pout ? pout.last+" "+pout.first : ""]);
-  });
-
-  dlFile(`partita-${m.date}-${slug(m.opponent)}.xls`,
-    toXls([{name:"Tabellino", rows:head}, {name:"Eventi", rows:ev}, {name:"Cambi", rows:sub}]), XLSMIME);
-  toast("File scaricato");
 }
 
-/* --- tutto l'archivio, per la segreteria o come secondo backup --- */
-function exportAll(){
-  const r = roster();
-  const ss = db.sessions.filter(x => x.teamId === db.current).sort((a,b)=>a.date.localeCompare(b.date));
-  const ms = db.matches.filter(x => x.teamId === db.current).sort((a,b)=>a.date.localeCompare(b.date));
+/* --- archivio completo della stagione --- */
+function exportAll(el){
+  return busy(el, () => {
+    const r = roster();
+    const ss = db.sessions.filter(x => x.teamId === db.current).sort((a,b)=>a.date.localeCompare(b.date));
+    const ms = db.matches.filter(x => x.teamId === db.current).sort((a,b)=>a.date.localeCompare(b.date));
+    ms.forEach(normMatch);
 
-  const rosa = [["Numero","Cognome","Nome","Certificato scade","Stato certificato"]];
-  r.forEach(p => rosa.push([p.num?Number(p.num):"", p.last, p.first, p.cert || "",
-    ({ok:"Valido", soon:"In scadenza", expired:"Scaduto", missing:"Mancante"})[certState(p)]]));
+    const gare = {
+      name: "Calendario e partite",
+      title: `${db.club} — ${team().name}`,
+      meta: [["Stagione", `${ms.length} partite`], ["Aggiornato al", new Date().toLocaleDateString("it-IT")]],
+      head: ["Data","Avversario","Dove","Formato","Convocati","Tempi vinti","V-P-S","Gol fatti","Gol subiti","Diff.","Punti"],
+      body: ms.map(m => { const sc = scoreOf(m);
+        return [new Date(m.date+"T12:00").toLocaleDateString("it-IT"), m.opponent,
+          m.venue==="home"?"Casa":"Trasferta", m.format, m.callups.length,
+          `${sc.w}-${sc.l}`, `${sc.w}-${sc.d}-${sc.l}`, sc.gf, sc.ga, sc.diff, sc.punti]; }),
+    };
+    gare.total = ["Totali","","","","", "", "",
+      ms.reduce((n,m)=>n+scoreOf(m).gf,0), ms.reduce((n,m)=>n+scoreOf(m).ga,0),
+      ms.reduce((n,m)=>n+scoreOf(m).diff,0), ms.reduce((n,m)=>n+scoreOf(m).punti,0)];
 
-  const pres = [["Cognome","Nome", ...ss.map(x => dShort(x.date)), "Allenamenti","Presenze","Frequenza %"]];
-  r.forEach(p => {
-    let tot=0, ok=0;
-    const cells = ss.map(x => {
-      const st = db.att[x.id]?.[p.id]?.s;
-      if(st){ tot++; if(st==="P") ok++; }
-      return st || "";
+    const reg = {name:"Registro gare", title:"Tabellino per partita",
+      head:["Data","Avversario","Cognome","Nome", ...SEGS.map(x=>x.sh), "Minuti","Gol","Assist"], body:[]};
+    ms.forEach(m => {
+      const d = new Date(m.date+"T12:00").toLocaleDateString("it-IT");
+      r.filter(p => m.callups.includes(p.id)).forEach(p => reg.body.push([
+        d, m.opponent, p.last, p.first, ...SEGKEYS.map(k => minutesIn(m,k,p.id)),
+        minutesOf(m,p.id), evCount(m,p.id,"g"), evCount(m,p.id,"a")]));
     });
-    pres.push([p.last, p.first, ...cells, tot, ok, tot ? Math.round(ok/tot*100) : ""]);
+
+    const cum = {
+      name: "Statistiche giocatori",
+      title: "Cumulativo stagione",
+      head: ["Cognome","Nome","Numero","Certificato","Allenamenti","Presenze","Frequenza %",
+             "Partite","Minuti","Media min/gara","Gol","Assist"],
+      body: r.map(p => {
+        let tot = 0, ok = 0;
+        ss.forEach(x => { const st = db.att[x.id]?.[p.id]?.s; if(st){ tot++; if(st === "P") ok++; } });
+        let g = 0, a = 0, min = 0, gio = 0;
+        ms.forEach(m => { const t = minutesOf(m,p.id); if(t>0) gio++;
+          min += t; g += evCount(m,p.id,"g"); a += evCount(m,p.id,"a"); });
+        return [p.last, p.first, p.num ? Number(p.num) : "", p.cert || "",
+          tot, ok, tot ? Math.round(ok/tot*100) : "", gio, min,
+          gio ? Math.round(min/gio) : 0, g, a];
+      }),
+    };
+    cum.total = ["Totali","","","", "", "", "", "",
+      cum.body.reduce((n,x)=>n+x[8],0), "",
+      cum.body.reduce((n,x)=>n+x[10],0), cum.body.reduce((n,x)=>n+x[11],0)];
+
+    const all = {
+      name: "Registro allenamenti",
+      title: "Presenze agli allenamenti",
+      head: ["Cognome","Nome", ...ss.map(x => dShort(x.date)), "Sedute","Presenze","Frequenza %"],
+      body: r.map(p => {
+        let tot = 0, ok = 0;
+        const cells = ss.map(x => {
+          const st = db.att[x.id]?.[p.id]?.s;
+          if(st){ tot++; if(st === "P") ok++; }
+          return st ? LAB[st].slice(0,1) : "";
+        });
+        return [p.last, p.first, ...cells, tot, ok, tot ? Math.round(ok/tot*100) : ""];
+      }),
+    };
+
+    saveXlsx(`miracolifc-${slug(team().name)}-${today()}.xlsx`, [gare, reg, cum, all]);
+    toast("Archivio scaricato");
   });
-
-  const part = [["Data","Avversario","Dove","Formato","Convocati","Tempi vinti","V-P-S","Gol fatti","Gol subiti","Punti"]];
-  ms.forEach(m => { normMatch(m); const sc = scoreOf(m); part.push([
-    new Date(m.date+"T12:00").toLocaleDateString("it-IT"), m.opponent,
-    m.venue==="home"?"Casa":"Trasferta", m.format, m.callups.length,
-    sc.w, `${sc.w}-${sc.d}-${sc.l}`, sc.gf, sc.ga, sc.punti]); });
-
-  const min = [["Cognome","Nome","Minuti totali","Gol","Assist","Partite giocate"]];
-  r.forEach(p => {
-    let mm=0, g=0, a=0, pl=0;
-    ms.forEach(m => { normMatch(m);
-      const t = minutesOf(m, p.id);
-      if(t>0) pl++;
-      mm += t; g += evCount(m,p.id,"g"); a += evCount(m,p.id,"a");
-    });
-    min.push([p.last, p.first, mm, g, a, pl]);
-  });
-
-  dlFile(`miracolifc-${slug(team().name)}-${today()}.xls`, toXls([
-    {name:"Rosa", rows:rosa}, {name:"Presenze", rows:pres},
-    {name:"Partite", rows:part}, {name:"Minutaggio", rows:min},
-  ]), XLSMIME);
-  toast("Archivio scaricato");
 }
 
 /* ============ SHEET ============ */
