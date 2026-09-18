@@ -256,20 +256,28 @@ nav button[aria-current="true"]::before{content:"";position:absolute;top:0;left:
 }
 
 /* ===== editor note convocazione ===== */
-.noterow{border:1px solid rgba(226,232,240,.9);border-left-width:5px;border-radius:14px;
-  padding:11px 12px;margin-bottom:11px;box-shadow:var(--shadow-sm)}
-.noterow textarea{border:0;background:transparent;padding:0;font-size:15.5px;line-height:1.45;
+.notebox{border:2px solid #111;border-radius:6px;padding:10px 12px}
+.noteline{padding:5px 0}
+.noteline + .noteline{border-top:1px dashed rgba(17,17,17,.18)}
+.noteline textarea{border:0;background:transparent;padding:0;font-size:15.5px;line-height:1.45;
   width:100%;resize:none}
-.noterow textarea:focus{outline:none;box-shadow:none}
-.notetools{display:flex;align-items:center;gap:6px;margin-top:9px;flex-wrap:wrap}
-.sw{width:26px;height:26px;border-radius:8px;border:1px solid rgba(15,23,42,.15);flex:none;
+.noteline textarea:focus{outline:none;box-shadow:none}
+.notetools{display:flex;align-items:center;gap:6px;margin-top:6px;flex-wrap:wrap}
+.sw{width:24px;height:24px;border-radius:50%;border:1px solid rgba(15,23,42,.25);flex:none;
   transition:transform .1s}
-.sw:active{transform:scale(.9)}
-.sw[aria-pressed="true"]{box-shadow:0 0 0 2px var(--ink)}
-.tg{height:28px;padding:0 10px;border-radius:8px;border:1px solid var(--line);background:var(--surf);
-  font-size:12.5px;font-weight:700;color:var(--soft)}
-.tg[aria-pressed="true"]{background:var(--ink);color:#fff;border-color:var(--ink)}
-.tg.del{margin-left:auto;color:var(--no);border-color:#FECDD3}
+.sw:active{transform:scale(.88)}
+.sw[aria-pressed="true"]{box-shadow:0 0 0 2px #fff, 0 0 0 4px rgba(15,23,42,.5)}
+.tg{height:26px;padding:0 9px;border-radius:8px;border:1px solid rgba(15,23,42,.2);
+  background:rgba(255,255,255,.75);font-size:12.5px;font-weight:700;color:#334155}
+.tg[aria-pressed="true"]{background:#16233A;color:#fff;border-color:#16233A}
+.tg.del{margin-left:auto;color:var(--no);font-size:16px;line-height:1}
+.pick{display:inline-flex;align-items:center;gap:7px;background:rgba(255,255,255,.8);
+  border:1px solid rgba(15,23,42,.2);border-radius:9px;padding:3px 7px;font-size:12px;
+  font-weight:700;color:#334155;margin:0}
+.pick input[type=color]{width:28px;height:24px;padding:0;border:1px solid rgba(15,23,42,.2);
+  border-radius:6px;background:none;cursor:pointer}
+.pick input[type=color]::-webkit-color-swatch-wrapper{padding:2px}
+.pick input[type=color]::-webkit-color-swatch{border:0;border-radius:4px}
 </style>
 </head>
 <body>
@@ -320,7 +328,7 @@ nav button[aria-current="true"]::before{content:"";position:absolute;top:0;left:
 
 const KEY = "miracolifc.v1";
 const BLANK = { club:"Miracoli FC", site:"Campo dei Miracoli", coach:"", phone:"", noteConv:"",
-                logo:null, logoC:null, logoR:null, notes:null, lastBackup:null, teams:[], players:[],
+                logo:null, logoC:null, logoR:null, notes:null, noteBg:"#FFFF00", lastBackup:null, teams:[], players:[],
                 sessions:[], att:{}, matches:[], current:null };
 let db = load();
 let tab = "appello";
@@ -1579,17 +1587,17 @@ const NOTE_DEF = "Portare sempre parastinchi e borraccia personale.\n" +
 /* Ogni riga delle note ha i suoi colori: il mister decide cosa deve
    saltare all'occhio nel gruppo WhatsApp. */
 const PALETTE = [
-  {n:"Avviso",   bg:"#FEF08A", fg:"#854D0E"},
-  {n:"Info",     bg:"#DBEAFE", fg:"#1E3A8A"},
-  {n:"Conferma", bg:"#DCFCE7", fg:"#14532D"},
-  {n:"Urgente",  bg:"#FEE2E2", fg:"#991B1B"},
-  {n:"Neutro",   bg:"#F1F5F9", fg:"#334155"},
-  {n:"Scuro",    bg:"#16233A", fg:"#FFFFFF"},
+  {n:"Nero",     fg:"#111827"},
+  {n:"Rosso",    fg:"#C00000"},
+  {n:"Blu",      fg:"#1E3A8A"},
+  {n:"Verde",    fg:"#14532D"},
+  {n:"Bordeaux", fg:"#7B1123"},
+  {n:"Viola",    fg:"#6B21A8"},
 ];
 function normNotes(){
   if(Array.isArray(db.notes) && db.notes.length) return db.notes;
   const src = (db.noteConv || NOTE_DEF).split("\n").map(x => x.trim()).filter(Boolean);
-  db.notes = src.map(t => ({id:uid(), text:t, bg:"#FEF08A", fg:"#854D0E", bold:true, warn:false}));
+  db.notes = src.map(t => ({id:uid(), text:t, fg:"#C00000", bold:true, warn:false}));
   return db.notes;
 }
 
@@ -1685,34 +1693,57 @@ function convAll(on){
 /* --- Disegno su canvas: nessuna libreria, funziona offline --- */
 function noteEditor(){
   const rows = normNotes();
-  if(!rows.length) return `<p class="muted">Nessuna indicazione. Aggiungine una qui sotto.</p>`;
-  return rows.map(r => `
-    <div class="noterow" style="background:${r.bg};border-left-color:${r.fg}">
+  const inner = rows.length ? rows.map(r => `
+    <div class="noteline" data-id="${r.id}">
       <textarea rows="2" style="color:${r.fg};font-weight:${r.bold?700:400}"
         onchange="setNote('${r.id}','text',this.value)">${E(r.text)}</textarea>
       <div class="notetools">
-        ${PALETTE.map(c => `<button class="sw" title="${c.n}" style="background:${c.bg}"
-          aria-pressed="${r.bg===c.bg}" onclick="paintNote('${r.id}','${c.bg}','${c.fg}')"></button>`).join("")}
+        ${PALETTE.map(c => `<button class="sw" title="${c.n}" style="background:${c.fg}"
+          aria-pressed="${r.fg===c.fg}" onclick="paintNote('${r.id}','${c.fg}')"></button>`).join("")}
+        <label class="pick" title="Colore del testo">
+          <input type="color" value="${r.fg}" oninput="setNoteColor('${r.id}',this.value)">
+        </label>
         <button class="tg" aria-pressed="${!!r.bold}" onclick="toggleNote('${r.id}','bold')">B</button>
         <button class="tg" aria-pressed="${!!r.warn}" onclick="toggleNote('${r.id}','warn')">⚠</button>
-        <button class="tg del" onclick="delNote('${r.id}')">Elimina</button>
+        <button class="tg del" onclick="delNote('${r.id}')">×</button>
       </div>
-    </div>`).join("");
+    </div>`).join("") : `<p class="muted">Nessuna indicazione.</p>`;
+
+  return `
+    <div class="notebox" id="notebox" style="background:${db.noteBg}">${inner}</div>
+    <div class="notetools" style="margin-top:9px">
+      <label class="pick"><span>Sfondo del riquadro</span>
+        <input type="color" value="${db.noteBg}" oninput="setNoteBg(this.value)"></label>
+    </div>`;
+}
+function setNoteBg(v){
+  db.noteBg = v; save();
+  const b = document.getElementById("notebox");
+  if(b) b.style.background = v;
 }
 function setNote(id, k, v){
   const r = normNotes().find(x => x.id === id);
   if(r){ r[k] = v; save(); }
 }
-function paintNote(id, bg, fg){
+/* Il riquadro è uno solo, come sul foglio ufficiale: quello che cambia
+   riga per riga è il colore del testo. */
+function setNoteColor(id, v){
   const r = normNotes().find(x => x.id === id);
-  if(r){ r.bg = bg; r.fg = fg; save(); render(); }
+  if(!r) return;
+  r.fg = v; save();
+  const ta = document.querySelector(`.noteline[data-id="${id}"] textarea`);
+  if(ta) ta.style.color = v;
+}
+function paintNote(id, fg){
+  const r = normNotes().find(x => x.id === id);
+  if(r){ r.fg = fg; save(); render(); }
 }
 function toggleNote(id, k){
   const r = normNotes().find(x => x.id === id);
   if(r){ r[k] = !r[k]; save(); render(); }
 }
 function addNote(){
-  normNotes().push({id:uid(), text:"", bg:"#DBEAFE", fg:"#1E3A8A", bold:false, warn:false});
+  normNotes().push({id:uid(), text:"", fg:"#111827", bold:false, warn:false});
   save(); render();
 }
 function delNote(id){
@@ -1874,49 +1905,52 @@ async function drawConv(m, names){
     y += rowH;
   }
 
-  /* indicazioni per le famiglie: ogni riga è una scheda con i suoi
-     colori, testo grande e a capo automatico */
+  /* indicazioni per le famiglie: un riquadro solo, come sul foglio
+     ufficiale, con il colore del testo scelto riga per riga */
   y += 24;
   const items = normNotes().filter(r => r.text.trim()).map(r => ({...r}));
-  if(m.kit) items.push({text:"Presentarsi con: " + m.kit, bg:"#F1F5F9", fg:"#334155", bold:false, warn:false});
+  if(m.kit) items.push({text:"Presentarsi con: " + m.kit, fg:"#111827", bold:true, warn:false});
 
-  const SZ = 24, LH = 33, PADX = 18, PADY = 15;
+  const SZ = 23, LH = 32, PADX = 16, PADY = 14;
+  const flat = [];
   items.forEach(r => {
-    const indent = r.warn ? 46 : 0;
+    const indent = r.warn ? 40 : 0;
     g.font = F(SZ, r.bold);
-    const maxW = w - PADX*2 - indent, lines = [];
+    const maxW = w - PADX*2 - indent;
     let cur = "";
+    const lines = [];
     r.text.trim().split(/\s+/).forEach(word => {
       const test = cur ? cur + " " + word : word;
       if(g.measureText(test).width > maxW && cur){ lines.push(cur); cur = word; }
       else cur = test;
     });
     if(cur) lines.push(cur);
-
-    const bh = PADY*2 + lines.length*LH - (LH - SZ);
-    g.fillStyle = r.bg;
-    if(g.roundRect){ g.beginPath(); g.roundRect(M, y, w, bh, 10); g.fill(); }
-    else g.fillRect(M, y, w, bh);
-    g.strokeStyle = "rgba(15,23,42,.18)"; g.lineWidth = 1.5;
-    if(g.roundRect){ g.beginPath(); g.roundRect(M, y, w, bh, 10); g.stroke(); }
-    else g.strokeRect(M, y, w, bh);
-    /* barra laterale del colore del testo: stacca la riga a colpo d'occhio */
-    g.fillStyle = r.fg; g.fillRect(M, y + 4, 6, bh - 8);
-
-    if(r.warn){
-      const cx = M + PADX + 13, cy = y + PADY + 13;
-      g.fillStyle = r.fg;
-      g.beginPath();
-      g.moveTo(cx, cy - 14); g.lineTo(cx + 15, cy + 12); g.lineTo(cx - 15, cy + 12);
-      g.closePath(); g.fill();
-      g.fillStyle = r.bg; g.font = F(16, true); g.textAlign = "center";
-      g.fillText("!", cx, cy + 9);
-    }
-
-    g.fillStyle = r.fg; g.textAlign = "left"; g.font = F(SZ, r.bold);
-    lines.forEach((l, i) => g.fillText(l, M + PADX + indent, y + PADY + SZ - 4 + i*LH));
-    y += bh + 12;
+    lines.forEach((l, i) => flat.push({t:l, fg:r.fg, bold:r.bold, warn:r.warn && i === 0, indent}));
   });
+
+  if(flat.length){
+    const bh = PADY*2 + flat.length*LH - (LH - SZ) + 2;
+    g.fillStyle = db.noteBg || "#FFFF00";
+    g.fillRect(M, y, w, bh);
+    g.strokeStyle = "#000"; g.lineWidth = 2;
+    g.strokeRect(M, y, w, bh);
+
+    flat.forEach((l, i) => {
+      const ly = y + PADY + SZ - 4 + i*LH;
+      if(l.warn){
+        const cx = M + PADX + 12, cy = ly - 8;
+        g.fillStyle = l.fg;
+        g.beginPath();
+        g.moveTo(cx, cy - 13); g.lineTo(cx + 14, cy + 11); g.lineTo(cx - 14, cy + 11);
+        g.closePath(); g.fill();
+        g.fillStyle = db.noteBg || "#FFFF00"; g.font = F(15, true); g.textAlign = "center";
+        g.fillText("!", cx, cy + 9);
+      }
+      g.fillStyle = l.fg; g.textAlign = "left"; g.font = F(SZ, l.bold);
+      g.fillText(l.t, M + PADX + l.indent, ly);
+    });
+    y += bh;
+  }
 
   return c;
 }
